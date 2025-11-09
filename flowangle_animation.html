@@ -268,7 +268,16 @@
     <div id="main-content">
         <div id="canvas-area">
             <div id="svg-preview"></div>
+            <div id="keyboard-hint" class="keyboard-hint"></div>
         </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Help -->
+    <div class="keyboard-shortcuts">
+        <h4>⌨️ Keyboard</h4>
+        <div class="shortcut"><span class="key">↑↓</span> <span>Flow</span></div>
+        <div class="shortcut"><span class="key">←→</span> <span>Angle</span></div>
+        <div class="shortcut"><span class="key">, .</span> <span>Sides</span></div>
     </div>
 
     <!-- Pulse Animation Controls -->
@@ -2246,15 +2255,112 @@
             };
         }
 
+        // ===== KEYBOARD CONTROLS =====
+
+        let keyboardListenerCleanup = null;
+
+        function setupKeyboardControls() {
+            // Clean up old listener
+            if (keyboardListenerCleanup) {
+                keyboardListenerCleanup();
+            }
+
+            const handler = function(event) {
+                // Don't intercept if user is typing in an input
+                if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+
+                let handled = false;
+
+                switch(event.key) {
+                    case 'ArrowUp':
+                        adjustFlow(0.01);
+                        handled = true;
+                        break;
+                    case 'ArrowDown':
+                        adjustFlow(-0.01);
+                        handled = true;
+                        break;
+                    case 'ArrowLeft':
+                        adjustAngle(-1);
+                        handled = true;
+                        break;
+                    case 'ArrowRight':
+                        adjustAngle(1);
+                        handled = true;
+                        break;
+                    case '.':
+                    case '>':
+                        adjustSides(1);
+                        handled = true;
+                        break;
+                    case ',':
+                    case '<':
+                        adjustSides(-1);
+                        handled = true;
+                        break;
+                }
+
+                if (handled) {
+                    event.preventDefault();
+                    showKeyboardHint(event.key);
+                }
+            };
+
+            document.addEventListener('keydown', handler);
+
+            // Return cleanup function
+            keyboardListenerCleanup = () => {
+                document.removeEventListener('keydown', handler);
+            };
+        }
+
+        function adjustSides(delta) {
+            const input = document.getElementById('sides');
+            let newValue = parseInt(input.value) + delta;
+            newValue = Math.max(1, Math.min(12, newValue));
+            input.value = newValue;
+            document.getElementById('sides-value').textContent = newValue;
+            updatePreview();
+        }
+
+        function showKeyboardHint(key) {
+            const hints = {
+                'ArrowUp': '↑ Flow +',
+                'ArrowDown': '↓ Flow -',
+                'ArrowLeft': '← Angle -',
+                'ArrowRight': '→ Angle +',
+                '.': '. Sides +',
+                '>': '. Sides +',
+                ',': ', Sides -',
+                '<': ', Sides -'
+            };
+
+            const hint = hints[key];
+            if (hint) {
+                const hintEl = document.getElementById('keyboard-hint');
+                if (hintEl) {
+                    hintEl.textContent = hint;
+                    hintEl.classList.add('show');
+                    setTimeout(() => {
+                        hintEl.classList.remove('show');
+                    }, 800);
+                }
+            }
+        }
+
         // Initialize on load
         window.addEventListener('load', () => {
             setupSidesChangeListener();
+            setupKeyboardControls();
             setTimeout(checkParameterLimits, 200);
         });
 
         // Update n-display when sides slider changes
         document.getElementById('sides').addEventListener('input', function() {
             const n = this.value;
+            document.getElementById('sides-value').textContent = n;
             document.getElementById('discoveries-n-display').textContent = n;
             document.getElementById('discoveries-n-value').textContent = n;
         });

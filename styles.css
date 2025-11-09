@@ -727,3 +727,60 @@ select {
 #explorer-overlay {
     z-index: 2099;
 }
+
+/* Keyboard Hint */
+.keyboard-hint {
+    position: fixed;
+    bottom: 200px;
+    right: 20px;
+    background: rgba(26, 26, 26, 0.95);
+    color: #6cf;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 2px solid #6cf;
+    font-weight: bold;
+    font-size: 16px;
+    box-shadow: 0 4px 20px rgba(102, 204, 255, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1500;
+    font-family: 'Monaco', monospace;
+}
+
+.keyboard-hint.show {
+    opacity: 1;
+}
+
+/* Keyboard shortcuts help */
+.keyboard-shortcuts {
+    position: fixed;
+    bottom: 195px;
+    left: 20px;
+    background: rgba(26, 26, 26, 0.9);
+    color: #888;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: 1px solid #333;
+    font-size: 11px;
+    z-index: 100;
+    max-width: 200px;
+}
+
+.keyboard-shortcuts h4 {
+    color: #6cf;
+    margin: 0 0 8px 0;
+    font-size: 12px;
+}
+
+.keyboard-shortcuts .shortcut {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    font-family: 'Monaco', monospace;
+}
+
+.keyboard-shortcuts .key {
+    color: #6cf;
+    font-weight: bold;
+}
