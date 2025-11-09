@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowAngle Multi-Layer Shading Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top Controls Panel */
+        #controls-panel {
+            background: #1a1a1a;
+            border-bottom: 2px solid #333;
+            padding: 15px 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+
+        /* Main Content Area */
+        #main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Canvas Area */
+        #canvas-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #151515;
+            position: relative;
+        }
+
+        #svg-preview {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #svg-preview svg {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Control Groups */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 150px;
+        }
+
+        .control-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .control-value {
+            font-size: 14px;
+            color: #6cf;
+            font-family: 'Monaco', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #6cf;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #6cf;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        input[type="color"] {
+            width: 60px;
+            height: 30px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #1a1a1a;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #6cf;
+        }
+
+        select {
+            padding: 6px 12px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #6cf;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #8df;
+            transform: translateY(-1px);
+        }
+
+        .preset-btn {
+            padding: 6px 12px;
+            background: #2a2a2a;
+            color: #6cf;
+            border: 1px solid #333;
+        }
+
+        .preset-btn:hover {
+            background: #333;
+        }
+
+        .divider {
+            width: 1px;
+            height: 30px;
+            background: #333;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #6cf;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        .layer-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .effect-panel {
+            background: #222;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #333;
+            margin-top: 10px;
+        }
+
+        .effect-panel.active {
+            border-color: #6cf;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Controls -->
+    <div id="controls-panel">
+        <h1 style="color: #6cf; font-size: 18px; margin: 0;">Multi-Layer Shading Explorer</h1>
+
+        <div class="divider"></div>
+
+        <!-- Shape Presets -->
+        <button class="preset-btn" onclick="loadPreset('triquetra')">Triquetra</button>
+        <button class="preset-btn" onclick="loadPreset('flower')">Flower</button>
+        <button class="preset-btn" onclick="loadPreset('star')">Star</button>
+
+        <div class="divider"></div>
+
+        <!-- Base Shape Controls -->
+        <div class="control-group">
+            <label class="control-label">Sides (n)</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="sides" min="3" max="12" value="3" oninput="updatePreview()">
+                <span class="control-value" id="sides-value">3</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Curve Factor</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="curve-factor" min="-3" max="1" step="0.01" value="-0.66" oninput="updatePreview()">
+                <span class="control-value" id="curve-value">-0.66</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Handle Angle</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="handle-angle" min="10" max="170" value="60" oninput="updatePreview()">
+                <span class="control-value" id="handle-angle-value">60°</span>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Layer Controls -->
+        <div class="control-group">
+            <label class="control-label">Layer Count</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="layer-count" min="1" max="10" value="5" oninput="updatePreview()">
+                <span class="control-value" id="layer-count-value">5</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Offset Distance</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="offset-distance" min="0" max="50" value="8" step="0.5" oninput="updatePreview()">
+                <span class="control-value" id="offset-distance-value">8</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Blend Mode</label>
+            <select id="blend-mode" onchange="updatePreview()">
+                <option value="normal">Normal</option>
+                <option value="multiply">Multiply</option>
+                <option value="screen">Screen</option>
+                <option value="overlay">Overlay</option>
+                <option value="darken">Darken</option>
+                <option value="lighten">Lighten</option>
+                <option value="color-dodge">Color Dodge</option>
+                <option value="color-burn">Color Burn</option>
+                <option value="hard-light">Hard Light</option>
+                <option value="soft-light">Soft Light</option>
+            </select>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Effect Presets -->
+        <button onclick="loadEffect('innerShadow')">Inner Shadow</button>
+        <button onclick="loadEffect('outerGlow')">Outer Glow</button>
+        <button onclick="loadEffect('depth')">Depth Effect</button>
+        <button onclick="loadEffect('emboss')">Emboss</button>
+
+        <div class="divider"></div>
+
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="show-guides" onchange="updatePreview()">
+            <span style="font-size: 13px;">Show Guides</span>
+        </label>
+
+        <div class="divider"></div>
+
+        <button onclick="downloadSVG()" style="background: #66c; color: #fff;">Download SVG</button>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <div id="canvas-area">
+            <div id="svg-preview"></div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentEffect = 'depth';
+
+        function getCurrentState() {
+            return {
+                sides: parseInt(document.getElementById('sides').value),
+                curveFactor: parseFloat(document.getElementById('curve-factor').value),
+                handleAngle: parseFloat(document.getElementById('handle-angle').value),
+                rotation: 0,
+                layerCount: parseInt(document.getElementById('layer-count').value),
+                offsetDistance: parseFloat(document.getElementById('offset-distance').value),
+                blendMode: document.getElementById('blend-mode').value,
+                showGuides: document.getElementById('show-guides').checked
+            };
+        }
+
+        function updatePreview() {
+            const state = getCurrentState();
+
+            // Update value displays
+            document.getElementById('sides-value').textContent = state.sides;
+            document.getElementById('curve-value').textContent = state.curveFactor.toFixed(2);
+            document.getElementById('handle-angle-value').textContent = state.handleAngle + '°';
+            document.getElementById('layer-count-value').textContent = state.layerCount;
+            document.getElementById('offset-distance-value').textContent = state.offsetDistance;
+
+            // Generate multi-layer SVG
+            const svg = generateMultiLayerFlowAngle(state);
+            document.getElementById('svg-preview').innerHTML = svg;
+        }
+
+        function generateFlowAnglePath(state, size = 600, offset = 0) {
+            const center = { x: size / 2, y: size / 2 };
+            const radius = (size * 0.30) + offset;
+            const vertices = [];
+            const angleStep = (2 * Math.PI) / state.sides;
+            const rotRad = (state.rotation * Math.PI) / 180;
+
+            // Calculate vertices
+            for (let i = 0; i < state.sides; i++) {
+                const angle = rotRad + i * angleStep;
+                vertices.push({
+                    x: center.x + radius * Math.cos(angle),
+                    y: center.y + radius * Math.sin(angle)
+                });
+            }
+
+            // Build triangles
+            const triangles = [];
+            const apexAngle = (state.handleAngle * Math.PI) / 180;
+
+            for (let i = 0; i < state.sides; i++) {
+                const v1 = vertices[i];
+                const v2 = vertices[(i + 1) % state.sides];
+                const midX = (v1.x + v2.x) / 2;
+                const midY = (v1.y + v2.y) / 2;
+                const dx = v2.x - v1.x;
+                const dy = v2.y - v1.y;
+                const baseLength = Math.sqrt(dx * dx + dy * dy);
+                const perpX = dy;
+                const perpY = -dx;
+                const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
+                const height = (baseLength / 2) / Math.tan(apexAngle / 2);
+                const thirdX = midX + (perpX / perpLength) * height;
+                const thirdY = midY + (perpY / perpLength) * height;
+
+                triangles.push({ v1, v2, third: { x: thirdX, y: thirdY } });
+            }
+
+            // Build path
+            let pathData = `M ${vertices[0].x} ${vertices[0].y}`;
+
+            for (let i = 0; i < state.sides; i++) {
+                const tri = triangles[i];
+                const nextVertex = vertices[(i + 1) % state.sides];
+                const cp1x = tri.v1.x + (tri.third.x - tri.v1.x) * state.curveFactor;
+                const cp1y = tri.v1.y + (tri.third.y - tri.v1.y) * state.curveFactor;
+                const cp2x = tri.v2.x + (tri.third.x - tri.v2.x) * state.curveFactor;
+                const cp2y = tri.v2.y + (tri.third.y - tri.v2.y) * state.curveFactor;
+
+                pathData += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${nextVertex.x} ${nextVertex.y}`;
+            }
+
+            pathData += ' Z';
+            return pathData;
+        }
+
+        function generateMultiLayerFlowAngle(state, size = 600) {
+            let shapes = '';
+            let defs = '';
+
+            // Define SVG filters for effects
+            defs += `
+                <defs>
+                    <filter id="blur-light" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="2"/>
+                    </filter>
+                    <filter id="blur-medium" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="4"/>
+                    </filter>
+                    <filter id="blur-heavy" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="8"/>
+                    </filter>
+                    <filter id="drop-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                        <feOffset dx="2" dy="2" result="offsetblur"/>
+                        <feComponentTransfer>
+                            <feFuncA type="linear" slope="0.5"/>
+                        </feComponentTransfer>
+                        <feMerge>
+                            <feMergeNode/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                    <filter id="inner-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+                        <feOffset dx="0" dy="2" result="offsetblur"/>
+                        <feFlood flood-color="#000000" flood-opacity="0.5"/>
+                        <feComposite in2="offsetblur" operator="in"/>
+                        <feMerge>
+                            <feMergeNode/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+            `;
+
+            // Effect-based layer generation
+            if (currentEffect === 'innerShadow') {
+                shapes += generateInnerShadowLayers(state, size);
+            } else if (currentEffect === 'outerGlow') {
+                shapes += generateOuterGlowLayers(state, size);
+            } else if (currentEffect === 'depth') {
+                shapes += generateDepthLayers(state, size);
+            } else if (currentEffect === 'emboss') {
+                shapes += generateEmbossLayers(state, size);
+            }
+
+            return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${defs}${shapes}</svg>`;
+        }
+
+        function generateInnerShadowLayers(state, size) {
+            let shapes = '';
+            const layerCount = state.layerCount;
+            const offsetStep = -state.offsetDistance / layerCount;
+
+            // Draw from outer to inner
+            for (let i = 0; i < layerCount; i++) {
+                const offset = i * offsetStep;
+                const pathData = generateFlowAnglePath(state, size, offset);
+                const opacity = 0.2 + (i / layerCount) * 0.6;
+                const darkness = Math.floor(100 + (i / layerCount) * 100);
+                const color = `rgb(${darkness}, ${darkness}, ${darkness + 50})`;
+
+                shapes += `<path d="${pathData}" fill="${color}" stroke="none" opacity="${opacity}" style="mix-blend-mode: ${state.blendMode}"/>`;
+            }
+
+            // Main shape on top
+            const mainPath = generateFlowAnglePath(state, size, 0);
+            shapes += `<path d="${mainPath}" fill="#4a90e2" stroke="#2c5aa0" stroke-width="2" opacity="0.9"/>`;
+
+            return shapes;
+        }
+
+        function generateOuterGlowLayers(state, size) {
+            let shapes = '';
+            const layerCount = state.layerCount;
+            const offsetStep = state.offsetDistance / layerCount;
+
+            // Draw from outer to inner (reverse for glow effect)
+            for (let i = layerCount - 1; i >= 0; i--) {
+                const offset = i * offsetStep;
+                const pathData = generateFlowAnglePath(state, size, offset);
+                const opacity = 0.1 + ((layerCount - i) / layerCount) * 0.4;
+                const brightness = Math.floor(100 + (i / layerCount) * 155);
+                const color = `rgb(${brightness}, ${brightness + 50}, ${brightness + 100})`;
+                const blur = i * 0.5;
+
+                shapes += `<path d="${pathData}" fill="${color}" stroke="none" opacity="${opacity}" filter="url(#blur-light)" style="mix-blend-mode: ${state.blendMode}"/>`;
+            }
+
+            // Main shape on top
+            const mainPath = generateFlowAnglePath(state, size, 0);
+            shapes += `<path d="${mainPath}" fill="#87ceeb" stroke="#4a90e2" stroke-width="2" opacity="0.95"/>`;
+
+            return shapes;
+        }
+
+        function generateDepthLayers(state, size) {
+            let shapes = '';
+            const layerCount = state.layerCount;
+            const offsetStep = state.offsetDistance / layerCount;
+
+            // Color gradient from dark (back) to light (front)
+            const colors = [
+                '#1a2332', '#2c3e50', '#34495e', '#4a6280', '#5a7a9f',
+                '#6a8fc0', '#7aa5d5', '#87ceeb', '#9dd8f0', '#b3e5fc'
+            ];
+
+            // Draw from back to front
+            for (let i = layerCount - 1; i >= 0; i--) {
+                const offset = -i * offsetStep;
+                const pathData = generateFlowAnglePath(state, size, offset);
+                const colorIndex = Math.floor((i / layerCount) * (colors.length - 1));
+                const color = colors[colorIndex] || colors[colors.length - 1];
+                const opacity = 0.6 + (i / layerCount) * 0.3;
+
+                // Add subtle stroke for layer separation
+                const strokeOpacity = i < layerCount - 1 ? 0.3 : 0;
+                shapes += `<path d="${pathData}" fill="${color}" stroke="#000" stroke-width="1" stroke-opacity="${strokeOpacity}" opacity="${opacity}" style="mix-blend-mode: ${state.blendMode}"/>`;
+            }
+
+            // Top highlight layer
+            const mainPath = generateFlowAnglePath(state, size, 0);
+            shapes += `<path d="${mainPath}" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.4"/>`;
+
+            return shapes;
+        }
+
+        function generateEmbossLayers(state, size) {
+            let shapes = '';
+            const layerCount = state.layerCount;
+
+            // Dark shadow layer (bottom-right)
+            const shadowOffset = state.offsetDistance;
+            const shadowPath = generateFlowAnglePath(state, size, -shadowOffset * 0.5);
+            shapes += `<path d="${shadowPath}" fill="#1a1a1a" stroke="none" opacity="0.6" filter="url(#blur-medium)" transform="translate(${shadowOffset}, ${shadowOffset})"/>`;
+
+            // Mid-tone layers
+            for (let i = layerCount - 1; i >= 0; i--) {
+                const offset = -i * (state.offsetDistance / layerCount) * 0.3;
+                const pathData = generateFlowAnglePath(state, size, offset);
+                const brightness = Math.floor(120 + (i / layerCount) * 80);
+                const color = `rgb(${brightness}, ${brightness}, ${brightness + 20})`;
+                const opacity = 0.5 + (i / layerCount) * 0.3;
+
+                shapes += `<path d="${pathData}" fill="${color}" stroke="none" opacity="${opacity}" style="mix-blend-mode: ${state.blendMode}"/>`;
+            }
+
+            // Highlight layer (top-left)
+            const highlightOffset = -state.offsetDistance * 0.3;
+            const highlightPath = generateFlowAnglePath(state, size, 0);
+            shapes += `<path d="${highlightPath}" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.6" filter="url(#blur-light)" transform="translate(${highlightOffset}, ${highlightOffset})"/>`;
+
+            // Main shape
+            const mainPath = generateFlowAnglePath(state, size, 0);
+            shapes += `<path d="${mainPath}" fill="#87ceeb" stroke="#4a90e2" stroke-width="1.5" opacity="0.9"/>`;
+
+            return shapes;
+        }
+
+        function loadPreset(name) {
+            const presets = {
+                triquetra: { sides: 3, curveFactor: -0.66, handleAngle: 60 },
+                flower: { sides: 6, curveFactor: -0.8, handleAngle: 30 },
+                star: { sides: 5, curveFactor: -1.2, handleAngle: 36 }
+            };
+
+            const preset = presets[name];
+            if (preset) {
+                document.getElementById('sides').value = preset.sides;
+                document.getElementById('curve-factor').value = preset.curveFactor;
+                document.getElementById('handle-angle').value = preset.handleAngle;
+                updatePreview();
+            }
+        }
+
+        function loadEffect(effectName) {
+            currentEffect = effectName;
+
+            // Set optimal defaults for each effect
+            const effectDefaults = {
+                innerShadow: { layers: 7, offset: 12, blend: 'multiply' },
+                outerGlow: { layers: 8, offset: 15, blend: 'screen' },
+                depth: { layers: 10, offset: 8, blend: 'normal' },
+                emboss: { layers: 5, offset: 10, blend: 'overlay' }
+            };
+
+            const defaults = effectDefaults[effectName];
+            if (defaults) {
+                document.getElementById('layer-count').value = defaults.layers;
+                document.getElementById('offset-distance').value = defaults.offset;
+                document.getElementById('blend-mode').value = defaults.blend;
+            }
+
+            updatePreview();
+        }
+
+        function downloadSVG() {
+            const svgElement = document.querySelector('#svg-preview svg');
+            if (!svgElement) {
+                alert('No SVG to download');
+                return;
+            }
+
+            const svgClone = svgElement.cloneNode(true);
+            svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+            const svgData = new XMLSerializer().serializeToString(svgClone);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const svgUrl = URL.createObjectURL(svgBlob);
+
+            const downloadLink = document.createElement('a');
+            const state = getCurrentState();
+            const filename = `flowangle-shading-${currentEffect}-layers${state.layerCount}.svg`;
+            downloadLink.href = svgUrl;
+            downloadLink.download = filename;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(svgUrl);
+        }
+
+        // Initialize
+        loadEffect('depth');
+        updatePreview();
+    </script>
+</body>
+</html>

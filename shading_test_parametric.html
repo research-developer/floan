@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowAngle Parametric Shading Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top Controls Panel */
+        #controls-panel {
+            background: #1a1a1a;
+            border-bottom: 2px solid #333;
+            padding: 15px 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            max-height: 25vh;
+            overflow-y: auto;
+        }
+
+        .title-section {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .subtitle {
+            font-size: 11px;
+            color: #888;
+            font-weight: normal;
+        }
+
+        /* Main Content Area */
+        #main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Canvas Area */
+        #canvas-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #151515;
+            position: relative;
+        }
+
+        #svg-preview {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #svg-preview svg {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Info Panel */
+        #info-panel {
+            width: 320px;
+            background: #1a1a1a;
+            border-left: 2px solid #333;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .info-section {
+            background: #242424;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .info-section h3 {
+            color: #6cf;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .param-indicator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .param-indicator:last-child {
+            border-bottom: none;
+        }
+
+        .param-name {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .param-value {
+            font-size: 14px;
+            color: #6cf;
+            font-family: 'Monaco', monospace;
+            font-weight: bold;
+        }
+
+        .color-bar {
+            height: 30px;
+            border-radius: 4px;
+            margin-top: 8px;
+            border: 1px solid #333;
+        }
+
+        /* Control Groups */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .control-value {
+            font-size: 14px;
+            color: #6cf;
+            font-family: 'Monaco', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #6cf;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #6cf;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #6cf;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #8df;
+            transform: translateY(-1px);
+        }
+
+        .preset-btn {
+            padding: 6px 12px;
+            background: #2a2a2a;
+            color: #6cf;
+            border: 1px solid #333;
+        }
+
+        .preset-btn:hover {
+            background: #333;
+        }
+
+        .preset-btn.active {
+            background: #6cf;
+            color: #000;
+            border-color: #6cf;
+        }
+
+        select {
+            padding: 6px 12px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #6cf;
+        }
+
+        .divider {
+            width: 1px;
+            height: 30px;
+            background: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid #333;
+        }
+
+        .legend-text {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .gradient-preview {
+            height: 40px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border: 1px solid #333;
+            position: relative;
+        }
+
+        .gradient-label {
+            position: absolute;
+            bottom: -20px;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .gradient-label.left {
+            left: 0;
+        }
+
+        .gradient-label.right {
+            right: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Controls -->
+    <div id="controls-panel">
+        <div class="title-section">
+            <h1 style="color: #6cf; font-size: 18px; margin: 0;">Parametric Shading Explorer</h1>
+            <span class="subtitle">Visual encoding of FlowAngle parameters</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Main Controls -->
+        <div class="control-group">
+            <label class="control-label">Sides (n)</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="sides" min="3" max="12" value="6" oninput="updatePreview()">
+                <span class="control-value" id="sides-value">6</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Curve Factor</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="curve-factor" min="-3" max="1" step="0.01" value="-0.66" oninput="updatePreview()">
+                <span class="control-value" id="curve-value">-0.66</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Handle Angle</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="handle-angle" min="10" max="170" value="60" oninput="updatePreview()">
+                <span class="control-value" id="handle-angle-value">60°</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Rotation</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="rotation" min="0" max="360" value="0" oninput="updatePreview()">
+                <span class="control-value" id="rotation-value">0°</span>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Color Scheme Selection -->
+        <div class="control-group">
+            <label class="control-label">Color Scheme</label>
+            <select id="color-scheme" onchange="updatePreview()">
+                <option value="thermal">Thermal (Cool → Warm)</option>
+                <option value="ocean">Ocean (Deep → Shallow)</option>
+                <option value="sunset">Sunset (Purple → Orange)</option>
+                <option value="forest">Forest (Dark → Bright Green)</option>
+                <option value="rainbow">Rainbow Spectrum</option>
+            </select>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Display Options -->
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="show-guides" onchange="updatePreview()">
+            <span style="font-size: 13px;">Show Guides</span>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="segment-shading" checked onchange="updatePreview()">
+            <span style="font-size: 13px;">Per-Segment Shading</span>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="show-stroke" checked onchange="updatePreview()">
+            <span style="font-size: 13px;">Show Stroke</span>
+        </label>
+
+        <div class="divider"></div>
+
+        <!-- Presets -->
+        <button class="preset-btn" onclick="loadPreset('triquetra')">Triquetra</button>
+        <button class="preset-btn" onclick="loadPreset('flower')">Flower</button>
+        <button class="preset-btn" onclick="loadPreset('star')">Star</button>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <div id="canvas-area">
+            <div id="svg-preview"></div>
+        </div>
+
+        <!-- Info Panel -->
+        <div id="info-panel">
+            <!-- Current Parameters -->
+            <div class="info-section">
+                <h3>Current Parameters</h3>
+                <div class="param-indicator">
+                    <span class="param-name">Sides (n)</span>
+                    <span class="param-value" id="info-sides">6</span>
+                </div>
+                <div class="param-indicator">
+                    <span class="param-name">Curve Factor</span>
+                    <span class="param-value" id="info-curve">-0.66</span>
+                </div>
+                <div class="param-indicator">
+                    <span class="param-name">Handle Angle</span>
+                    <span class="param-value" id="info-angle">60°</span>
+                </div>
+                <div class="param-indicator">
+                    <span class="param-name">Rotation</span>
+                    <span class="param-value" id="info-rotation">0°</span>
+                </div>
+            </div>
+
+            <!-- Color Mapping Legend -->
+            <div class="info-section">
+                <h3>Color Encoding</h3>
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 11px; color: #888; margin-bottom: 8px;">CURVE FACTOR (Hue)</div>
+                    <div class="gradient-preview" id="curve-gradient">
+                        <span class="gradient-label left">-3.0 (Cool)</span>
+                        <span class="gradient-label right">+1.0 (Warm)</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 11px; color: #888; margin-bottom: 8px;">HANDLE ANGLE (Brightness)</div>
+                    <div class="gradient-preview" id="angle-gradient">
+                        <span class="gradient-label left">10° (Dark)</span>
+                        <span class="gradient-label right">170° (Bright)</span>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; color: #888; margin-bottom: 8px;">SIDES COUNT (Saturation)</div>
+                    <div class="gradient-preview" id="sides-gradient">
+                        <span class="gradient-label left">3 (Low)</span>
+                        <span class="gradient-label right">12 (High)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Guide -->
+            <div class="info-section">
+                <h3>How to Read</h3>
+                <div style="font-size: 12px; color: #ccc; line-height: 1.6;">
+                    <p style="margin-bottom: 10px;"><strong style="color: #6cf;">Color Temperature:</strong> Indicates curve direction. Cool blues = negative curve, warm oranges = positive curve.</p>
+                    <p style="margin-bottom: 10px;"><strong style="color: #6cf;">Brightness:</strong> Shows handle angle sharpness. Darker = sharper angles, brighter = gentler curves.</p>
+                    <p style="margin-bottom: 10px;"><strong style="color: #6cf;">Saturation:</strong> Reflects shape complexity. More sides = more saturated colors.</p>
+                    <p><strong style="color: #6cf;">Per-Segment:</strong> Each segment can show position-based variation in a circular pattern.</p>
+                </div>
+            </div>
+
+            <!-- Current Color -->
+            <div class="info-section">
+                <h3>Active Color</h3>
+                <div class="color-bar" id="current-color"></div>
+                <div style="margin-top: 10px; font-size: 11px; color: #888; font-family: 'Monaco', monospace;" id="color-code">
+                    #000000
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Color scheme definitions
+        const colorSchemes = {
+            thermal: {
+                name: 'Thermal',
+                curveColors: [
+                    { pos: -3, color: '#0066cc' },  // Deep blue (cold/negative)
+                    { pos: -2, color: '#00cccc' },  // Cyan
+                    { pos: -1, color: '#00cc66' },  // Green-cyan
+                    { pos: 0, color: '#cccc00' },   // Yellow
+                    { pos: 0.5, color: '#ff9900' }, // Orange
+                    { pos: 1, color: '#ff3300' }    // Red (hot/positive)
+                ]
+            },
+            ocean: {
+                name: 'Ocean',
+                curveColors: [
+                    { pos: -3, color: '#001a33' },  // Deep ocean
+                    { pos: -2, color: '#003366' },  // Deep blue
+                    { pos: -1, color: '#0066cc' },  // Ocean blue
+                    { pos: 0, color: '#33cccc' },   // Turquoise
+                    { pos: 0.5, color: '#66ffcc' }, // Light aqua
+                    { pos: 1, color: '#ccffff' }    // Shallow water
+                ]
+            },
+            sunset: {
+                name: 'Sunset',
+                curveColors: [
+                    { pos: -3, color: '#1a0033' },  // Deep purple
+                    { pos: -2, color: '#4d0099' },  // Purple
+                    { pos: -1, color: '#9933cc' },  // Violet
+                    { pos: 0, color: '#cc66ff' },   // Light purple
+                    { pos: 0.5, color: '#ff9966' }, // Coral
+                    { pos: 1, color: '#ffcc33' }    // Golden orange
+                ]
+            },
+            forest: {
+                name: 'Forest',
+                curveColors: [
+                    { pos: -3, color: '#001a00' },  // Deep forest
+                    { pos: -2, color: '#003300' },  // Dark green
+                    { pos: -1, color: '#006633' },  // Forest green
+                    { pos: 0, color: '#33cc33' },   // Green
+                    { pos: 0.5, color: '#66ff66' }, // Light green
+                    { pos: 1, color: '#ccff99' }    // Pale green
+                ]
+            },
+            rainbow: {
+                name: 'Rainbow',
+                curveColors: [
+                    { pos: -3, color: '#9400d3' },  // Violet
+                    { pos: -2, color: '#0000ff' },  // Blue
+                    { pos: -1, color: '#00ff00' },  // Green
+                    { pos: 0, color: '#ffff00' },   // Yellow
+                    { pos: 0.5, color: '#ff7f00' }, // Orange
+                    { pos: 1, color: '#ff0000' }    // Red
+                ]
+            }
+        };
+
+        // Initialize
+        updatePreview();
+        updateGradientPreviews();
+
+        function getCurrentState() {
+            return {
+                sides: parseInt(document.getElementById('sides').value),
+                curveFactor: parseFloat(document.getElementById('curve-factor').value),
+                handleAngle: parseFloat(document.getElementById('handle-angle').value),
+                rotation: parseFloat(document.getElementById('rotation').value),
+                showGuides: document.getElementById('show-guides').checked,
+                segmentShading: document.getElementById('segment-shading').checked,
+                showStroke: document.getElementById('show-stroke').checked,
+                colorScheme: document.getElementById('color-scheme').value
+            };
+        }
+
+        function updatePreview() {
+            const state = getCurrentState();
+
+            // Update value displays
+            document.getElementById('sides-value').textContent = state.sides;
+            document.getElementById('curve-value').textContent = state.curveFactor.toFixed(2);
+            document.getElementById('handle-angle-value').textContent = state.handleAngle + '°';
+            document.getElementById('rotation-value').textContent = state.rotation + '°';
+
+            // Update info panel
+            document.getElementById('info-sides').textContent = state.sides;
+            document.getElementById('info-curve').textContent = state.curveFactor.toFixed(2);
+            document.getElementById('info-angle').textContent = state.handleAngle + '°';
+            document.getElementById('info-rotation').textContent = state.rotation + '°';
+
+            // Generate SVG with parametric shading
+            const svg = generateFlowAngle(state);
+            document.getElementById('svg-preview').innerHTML = svg;
+
+            // Update current color display
+            const baseColor = getColorForParams(state.curveFactor, state.handleAngle, state.sides, state.colorScheme, 0);
+            document.getElementById('current-color').style.background = baseColor;
+            document.getElementById('color-code').textContent = baseColor;
+        }
+
+        function updateGradientPreviews() {
+            const scheme = document.getElementById('color-scheme').value;
+
+            // Curve factor gradient
+            const curveGrad = createGradientString(colorSchemes[scheme].curveColors);
+            document.getElementById('curve-gradient').style.background = curveGrad;
+
+            // Angle gradient (brightness)
+            const baseColor = getColorForParams(0, 90, 6, scheme, 0);
+            const rgb = hexToRgb(baseColor);
+            document.getElementById('angle-gradient').style.background =
+                `linear-gradient(to right, rgb(${rgb.r*0.2}, ${rgb.g*0.2}, ${rgb.b*0.2}), rgb(${rgb.r}, ${rgb.g}, ${rgb.b}))`;
+
+            // Sides gradient (saturation)
+            const hsl = hexToHSL(baseColor);
+            document.getElementById('sides-gradient').style.background =
+                `linear-gradient(to right, hsl(${hsl.h}, 20%, ${hsl.l}%), hsl(${hsl.h}, 100%, ${hsl.l}%))`;
+        }
+
+        function createGradientString(colorStops) {
+            const total = colorStops[colorStops.length - 1].pos - colorStops[0].pos;
+            const stops = colorStops.map(stop => {
+                const percent = ((stop.pos - colorStops[0].pos) / total) * 100;
+                return `${stop.color} ${percent}%`;
+            });
+            return `linear-gradient(to right, ${stops.join(', ')})`;
+        }
+
+        function getColorForParams(curveFactor, handleAngle, sides, schemeName, segmentIndex) {
+            const scheme = colorSchemes[schemeName];
+
+            // 1. Base hue from curve factor
+            const baseColor = interpolateColorFromScheme(curveFactor, scheme.curveColors);
+            const rgb = hexToRgb(baseColor);
+            const hsl = rgbToHSL(rgb.r, rgb.g, rgb.b);
+
+            // 2. Brightness from handle angle (10-170 mapped to 20-100% lightness)
+            const brightnessNorm = (handleAngle - 10) / (170 - 10);
+            const lightness = 20 + (brightnessNorm * 60); // 20% to 80%
+
+            // 3. Saturation from sides count (3-12 mapped to 30-100% saturation)
+            const saturationNorm = (sides - 3) / (12 - 3);
+            const saturation = 30 + (saturationNorm * 70); // 30% to 100%
+
+            // 4. Optional per-segment variation
+            let hueShift = hsl.h;
+            if (segmentIndex !== undefined && sides > 0) {
+                // Add subtle hue rotation based on position
+                const segmentOffset = (segmentIndex / sides) * 30; // Up to 30° shift
+                hueShift = (hsl.h + segmentOffset) % 360;
+            }
+
+            return `hsl(${hueShift}, ${saturation}%, ${lightness}%)`;
+        }
+
+        function interpolateColorFromScheme(value, colorStops) {
+            // Clamp value to range
+            const minPos = colorStops[0].pos;
+            const maxPos = colorStops[colorStops.length - 1].pos;
+            const clampedValue = Math.max(minPos, Math.min(maxPos, value));
+
+            // Find surrounding color stops
+            for (let i = 0; i < colorStops.length - 1; i++) {
+                const stop1 = colorStops[i];
+                const stop2 = colorStops[i + 1];
+
+                if (clampedValue >= stop1.pos && clampedValue <= stop2.pos) {
+                    const t = (clampedValue - stop1.pos) / (stop2.pos - stop1.pos);
+                    return interpolateColor(stop1.color, stop2.color, t);
+                }
+            }
+
+            return colorStops[colorStops.length - 1].color;
+        }
+
+        function interpolateColor(color1, color2, t) {
+            const rgb1 = hexToRgb(color1);
+            const rgb2 = hexToRgb(color2);
+
+            const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * t);
+            const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * t);
+            const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * t);
+
+            return rgbToHex(r, g, b);
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 0, b: 0 };
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        function rgbToHSL(r, g, b) {
+            r /= 255;
+            g /= 255;
+            b /= 255;
+
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+
+            return {
+                h: Math.round(h * 360),
+                s: Math.round(s * 100),
+                l: Math.round(l * 100)
+            };
+        }
+
+        function hexToHSL(hex) {
+            const rgb = hexToRgb(hex);
+            return rgbToHSL(rgb.r, rgb.g, rgb.b);
+        }
+
+        function generateFlowAngle(state, size = 600) {
+            const center = { x: size / 2, y: size / 2 };
+            const radius = size * 0.30;
+            const vertices = [];
+            const angleStep = (2 * Math.PI) / state.sides;
+            const rotRad = (state.rotation * Math.PI) / 180;
+
+            // Calculate vertices
+            for (let i = 0; i < state.sides; i++) {
+                const angle = rotRad + i * angleStep;
+                vertices.push({
+                    x: center.x + radius * Math.cos(angle),
+                    y: center.y + radius * Math.sin(angle)
+                });
+            }
+
+            // Build triangles
+            const triangles = [];
+            const apexAngle = (state.handleAngle * Math.PI) / 180;
+
+            for (let i = 0; i < state.sides; i++) {
+                const v1 = vertices[i];
+                const v2 = vertices[(i + 1) % state.sides];
+                const midX = (v1.x + v2.x) / 2;
+                const midY = (v1.y + v2.y) / 2;
+                const dx = v2.x - v1.x;
+                const dy = v2.y - v1.y;
+                const baseLength = Math.sqrt(dx * dx + dy * dy);
+                const perpX = dy;
+                const perpY = -dx;
+                const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
+                const height = (baseLength / 2) / Math.tan(apexAngle / 2);
+                const thirdX = midX + (perpX / perpLength) * height;
+                const thirdY = midY + (perpY / perpLength) * height;
+
+                triangles.push({ v1, v2, third: { x: thirdX, y: thirdY } });
+            }
+
+            // Build SVG
+            let shapes = '';
+
+            // Draw guides if enabled
+            if (state.showGuides) {
+                triangles.forEach(tri => {
+                    shapes += `<polygon points="${tri.v1.x},${tri.v1.y} ${tri.v2.x},${tri.v2.y} ${tri.third.x},${tri.third.y}" fill="none" stroke="#6cf" stroke-width="1" stroke-dasharray="3,3" opacity="0.3"/>`;
+                });
+            }
+
+            // Generate path with parametric shading
+            if (state.segmentShading) {
+                // Draw each segment with its own color
+                for (let i = 0; i < state.sides; i++) {
+                    const tri = triangles[i];
+                    const v1 = vertices[i];
+                    const nextVertex = vertices[(i + 1) % state.sides];
+                    const cp1x = tri.v1.x + (tri.third.x - tri.v1.x) * state.curveFactor;
+                    const cp1y = tri.v1.y + (tri.third.y - tri.v1.y) * state.curveFactor;
+                    const cp2x = tri.v2.x + (tri.third.x - tri.v2.x) * state.curveFactor;
+                    const cp2y = tri.v2.y + (tri.third.y - tri.v2.y) * state.curveFactor;
+
+                    const segmentPath = `M ${v1.x} ${v1.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${nextVertex.x} ${nextVertex.y} L ${center.x} ${center.y} Z`;
+
+                    const fillColor = getColorForParams(
+                        state.curveFactor,
+                        state.handleAngle,
+                        state.sides,
+                        state.colorScheme,
+                        i
+                    );
+
+                    const strokeAttr = state.showStroke ? `stroke="#000" stroke-width="1.5" stroke-opacity="0.3"` : '';
+                    shapes += `<path d="${segmentPath}" fill="${fillColor}" ${strokeAttr}/>`;
+
+                    if (state.showGuides) {
+                        shapes += `<circle cx="${cp1x}" cy="${cp1y}" r="2" fill="#f66" opacity="0.6"/>`;
+                        shapes += `<circle cx="${cp2x}" cy="${cp2y}" r="2" fill="#6f6" opacity="0.6"/>`;
+                        shapes += `<line x1="${tri.v1.x}" y1="${tri.v1.y}" x2="${cp1x}" y2="${cp1y}" stroke="#f66" stroke-width="1" stroke-dasharray="2,2" opacity="0.4"/>`;
+                        shapes += `<line x1="${tri.v2.x}" y1="${tri.v2.y}" x2="${cp2x}" y2="${cp2y}" stroke="#6f6" stroke-width="1" stroke-dasharray="2,2" opacity="0.4"/>`;
+                    }
+                }
+            } else {
+                // Draw as single path with uniform color
+                let pathData = `M ${vertices[0].x} ${vertices[0].y}`;
+
+                for (let i = 0; i < state.sides; i++) {
+                    const tri = triangles[i];
+                    const nextVertex = vertices[(i + 1) % state.sides];
+                    const cp1x = tri.v1.x + (tri.third.x - tri.v1.x) * state.curveFactor;
+                    const cp1y = tri.v1.y + (tri.third.y - tri.v1.y) * state.curveFactor;
+                    const cp2x = tri.v2.x + (tri.third.x - tri.v2.x) * state.curveFactor;
+                    const cp2y = tri.v2.y + (tri.third.y - tri.v2.y) * state.curveFactor;
+
+                    pathData += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${nextVertex.x} ${nextVertex.y}`;
+
+                    if (state.showGuides) {
+                        shapes += `<circle cx="${cp1x}" cy="${cp1y}" r="2" fill="#f66" opacity="0.6"/>`;
+                        shapes += `<circle cx="${cp2x}" cy="${cp2y}" r="2" fill="#6f6" opacity="0.6"/>`;
+                        shapes += `<line x1="${tri.v1.x}" y1="${tri.v1.y}" x2="${cp1x}" y2="${cp1y}" stroke="#f66" stroke-width="1" stroke-dasharray="2,2" opacity="0.4"/>`;
+                        shapes += `<line x1="${tri.v2.x}" y1="${tri.v2.y}" x2="${cp2x}" y2="${cp2y}" stroke="#6f6" stroke-width="1" stroke-dasharray="2,2" opacity="0.4"/>`;
+                    }
+                }
+
+                const fillColor = getColorForParams(
+                    state.curveFactor,
+                    state.handleAngle,
+                    state.sides,
+                    state.colorScheme
+                );
+
+                const strokeAttr = state.showStroke ? `stroke="#000" stroke-width="2" stroke-opacity="0.4"` : '';
+                shapes += `<path d="${pathData} Z" fill="${fillColor}" ${strokeAttr}/>`;
+            }
+
+            return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${shapes}</svg>`;
+        }
+
+        function loadPreset(name) {
+            const presets = {
+                triquetra: { sides: 3, curveFactor: -0.66, handleAngle: 60, rotation: 0 },
+                flower: { sides: 6, curveFactor: -0.8, handleAngle: 30, rotation: 0 },
+                star: { sides: 5, curveFactor: -1.2, handleAngle: 36, rotation: 18 }
+            };
+
+            const preset = presets[name];
+            if (preset) {
+                document.getElementById('sides').value = preset.sides;
+                document.getElementById('curve-factor').value = preset.curveFactor;
+                document.getElementById('handle-angle').value = preset.handleAngle;
+                document.getElementById('rotation').value = preset.rotation;
+                updatePreview();
+            }
+        }
+
+        // Update gradient previews when scheme changes
+        document.getElementById('color-scheme').addEventListener('change', updateGradientPreviews);
+    </script>
+</body>
+</html>
