@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowAngle Constraints Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top Controls Panel */
+        #controls-panel {
+            background: #1a1a1a;
+            border-bottom: 2px solid #333;
+            padding: 15px 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Main Content Area */
+        #main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Canvas Area */
+        #canvas-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #151515;
+            position: relative;
+        }
+
+        #svg-preview {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #svg-preview svg {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Validity Indicator Overlay */
+        #validity-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 250px;
+            backdrop-filter: blur(10px);
+        }
+
+        #validity-score {
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+            transition: color 0.3s;
+        }
+
+        #validity-score.valid {
+            color: #4ade80;
+        }
+
+        #validity-score.warning {
+            color: #fbbf24;
+        }
+
+        #validity-score.error {
+            color: #ef4444;
+        }
+
+        #validity-label {
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 15px;
+        }
+
+        .validity-issue {
+            background: rgba(239, 68, 68, 0.2);
+            border-left: 3px solid #ef4444;
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .validity-warning {
+            background: rgba(251, 191, 36, 0.2);
+            border-left: 3px solid #fbbf24;
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .validity-good {
+            background: rgba(74, 222, 128, 0.2);
+            border-left: 3px solid #4ade80;
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* Constraints Panel */
+        #constraints-panel {
+            width: 350px;
+            background: #1a1a1a;
+            border-left: 2px solid #333;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .constraints-section {
+            padding: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .constraints-section h3 {
+            color: #6cf;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .constraint-capture {
+            background: #2a2a2a;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .constraint-capture.active {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.1);
+        }
+
+        .constraint-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        .constraint-label {
+            color: #888;
+        }
+
+        .constraint-value {
+            color: #6cf;
+            font-family: 'Monaco', monospace;
+            font-weight: bold;
+        }
+
+        /* Control Groups */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .control-value {
+            font-size: 14px;
+            color: #6cf;
+            font-family: 'Monaco', monospace;
+        }
+
+        /* Range input with zones */
+        .range-container {
+            position: relative;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .range-zones {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, #ef4444 0%, #ef4444 20%, #fbbf24 20%, #fbbf24 40%, #4ade80 40%, #4ade80 60%, #fbbf24 60%, #fbbf24 80%, #ef4444 80%, #ef4444 100%);
+            border-radius: 2px;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #6cf;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #6cf;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 6px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #6cf;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #8df;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #2a2a2a;
+            color: #6cf;
+            border: 1px solid #333;
+        }
+
+        button.secondary:hover {
+            background: #333;
+        }
+
+        button.success {
+            background: #4ade80;
+            color: #000;
+        }
+
+        button.success:hover {
+            background: #6ee89a;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .preset-btn {
+            padding: 6px 12px;
+            background: #2a2a2a;
+            color: #6cf;
+            border: 1px solid #333;
+        }
+
+        .preset-btn:hover {
+            background: #333;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #6cf;
+        }
+
+        select {
+            padding: 6px 12px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .divider {
+            width: 1px;
+            height: 30px;
+            background: #333;
+        }
+
+        /* Saved Constraints Display */
+        .saved-constraint {
+            background: #242424;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .saved-constraint-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .saved-constraint-title {
+            font-weight: bold;
+            color: #6cf;
+            font-size: 13px;
+        }
+
+        .saved-constraint-data {
+            font-size: 11px;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        .delete-btn {
+            background: #ef4444;
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 10px;
+        }
+
+        .delete-btn:hover {
+            background: #dc2626;
+        }
+
+        .apply-btn {
+            background: #4ade80;
+            color: #000;
+            padding: 4px 8px;
+            font-size: 10px;
+            margin-right: 5px;
+        }
+
+        .apply-btn:hover {
+            background: #6ee89a;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Controls -->
+    <div id="controls-panel">
+        <h1 style="color: #6cf; font-size: 18px; margin: 0;">🔍 FlowAngle Constraints Manager</h1>
+
+        <div class="divider"></div>
+
+        <!-- Presets -->
+        <button class="preset-btn" onclick="loadPreset('triquetra')">Triquetra</button>
+        <button class="preset-btn" onclick="loadPreset('flower')">Flower</button>
+        <button class="preset-btn" onclick="loadPreset('star')">Star</button>
+        <button class="preset-btn" onclick="loadPreset('smooth')">Smooth</button>
+
+        <div class="divider"></div>
+
+        <!-- Main Controls -->
+        <div class="control-group">
+            <label class="control-label">Sides (n)</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="sides" min="3" max="12" value="3" oninput="updatePreview()">
+                <span class="control-value" id="sides-value">3</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Curve Factor</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="curve-factor" min="-3" max="1" step="0.01" value="-0.66" oninput="updatePreview()">
+                <span class="control-value" id="curve-value">-0.66</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Handle Angle</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="handle-angle" min="10" max="170" value="60" oninput="updatePreview()">
+                <span class="control-value" id="handle-angle-value">60°</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Rotation</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="rotation" min="0" max="360" value="0" oninput="updatePreview()">
+                <span class="control-value" id="rotation-value">0°</span>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="show-guides" onchange="updatePreview()">
+            <span style="font-size: 13px;">Show Guides</span>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="show-problems" checked onchange="updatePreview()">
+            <span style="font-size: 13px;">Highlight Problems</span>
+        </label>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <div id="canvas-area">
+            <div id="svg-preview"></div>
+
+            <!-- Validity Overlay -->
+            <div id="validity-overlay">
+                <div id="validity-score" class="valid">100%</div>
+                <div id="validity-label">VALIDITY SCORE</div>
+                <div id="validity-messages"></div>
+            </div>
+        </div>
+
+        <!-- Constraints Panel -->
+        <div id="constraints-panel">
+            <!-- Current Constraints -->
+            <div class="constraints-section">
+                <h3>Current Limits</h3>
+                <div class="constraint-capture" id="current-capture">
+                    <div class="constraint-item">
+                        <span class="constraint-label">Sides (n):</span>
+                        <span class="constraint-value" id="capture-n">3</span>
+                    </div>
+                    <div class="constraint-item">
+                        <span class="constraint-label">Curve Range:</span>
+                        <span class="constraint-value" id="capture-curve">-3.00 to 1.00</span>
+                    </div>
+                    <div class="constraint-item">
+                        <span class="constraint-label">Angle Range:</span>
+                        <span class="constraint-value" id="capture-angle">10° to 170°</span>
+                    </div>
+                    <div class="constraint-item">
+                        <span class="constraint-label">Safe Curve:</span>
+                        <span class="constraint-value" id="safe-curve">-2.00 to 0.50</span>
+                    </div>
+                    <div class="constraint-item">
+                        <span class="constraint-label">Safe Angle:</span>
+                        <span class="constraint-value" id="safe-angle">30° to 120°</span>
+                    </div>
+                </div>
+                <button class="success" onclick="captureConstraints()" id="capture-btn">
+                    💾 Capture Current Limits
+                </button>
+            </div>
+
+            <!-- Constraint Recommendations -->
+            <div class="constraints-section">
+                <h3>Recommendations</h3>
+                <div id="recommendations">
+                    <p style="font-size: 12px; color: #888;">Adjust parameters to see recommendations...</p>
+                </div>
+            </div>
+
+            <!-- Saved Constraints -->
+            <div class="constraints-section">
+                <h3>Saved Constraints (Per N)</h3>
+                <div id="saved-constraints">
+                    <p style="font-size: 12px; color: #888;">No saved constraints yet.</p>
+                </div>
+            </div>
+
+            <!-- Detection Details -->
+            <div class="constraints-section">
+                <h3>Detection Details</h3>
+                <div id="detection-details" style="font-size: 11px; color: #888; line-height: 1.6;">
+                    <div id="detection-info"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== GEOMETRY UTILITIES =====
+
+        /**
+         * Check if two line segments intersect
+         * Returns true if segments AB and CD intersect
+         */
+        function lineSegmentsIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+            const det = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
+            if (Math.abs(det) < 1e-10) return false; // Parallel or coincident
+
+            const t = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / det;
+            const u = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / det;
+
+            return (t >= 0 && t <= 1 && u >= 0 && u <= 1);
+        }
+
+        /**
+         * Check if point is inside triangle
+         */
+        function pointInTriangle(px, py, ax, ay, bx, by, cx, cy) {
+            const v0x = cx - ax;
+            const v0y = cy - ay;
+            const v1x = bx - ax;
+            const v1y = by - ay;
+            const v2x = px - ax;
+            const v2y = py - ay;
+
+            const dot00 = v0x * v0x + v0y * v0y;
+            const dot01 = v0x * v1x + v0y * v1y;
+            const dot02 = v0x * v2x + v0y * v2y;
+            const dot11 = v1x * v1x + v1y * v1y;
+            const dot12 = v1x * v2x + v1y * v2y;
+
+            const invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
+            const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+            const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+            return (u >= 0) && (v >= 0) && (u + v <= 1);
+        }
+
+        /**
+         * Sample points along a cubic bezier curve
+         */
+        function sampleBezierCurve(p0x, p0y, c1x, c1y, c2x, c2y, p1x, p1y, samples = 20) {
+            const points = [];
+            for (let i = 0; i <= samples; i++) {
+                const t = i / samples;
+                const mt = 1 - t;
+                const mt2 = mt * mt;
+                const mt3 = mt2 * mt;
+                const t2 = t * t;
+                const t3 = t2 * t;
+
+                const x = mt3 * p0x + 3 * mt2 * t * c1x + 3 * mt * t2 * c2x + t3 * p1x;
+                const y = mt3 * p0y + 3 * mt2 * t * c1y + 3 * mt * t2 * c2y + t3 * p1y;
+
+                points.push({ x, y, t });
+            }
+            return points;
+        }
+
+        /**
+         * Detect bezier curve self-intersection by checking if curve points cross
+         */
+        function bezierSelfIntersects(p0x, p0y, c1x, c1y, c2x, c2y, p1x, p1y) {
+            const points = sampleBezierCurve(p0x, p0y, c1x, c1y, c2x, c2y, p1x, p1y, 30);
+
+            // Check if curve crosses itself
+            for (let i = 0; i < points.length - 2; i++) {
+                for (let j = i + 2; j < points.length - 1; j++) {
+                    if (Math.abs(i - j) < 3) continue; // Skip adjacent segments
+
+                    if (lineSegmentsIntersect(
+                        points[i].x, points[i].y,
+                        points[i + 1].x, points[i + 1].y,
+                        points[j].x, points[j].y,
+                        points[j + 1].x, points[j + 1].y
+                    )) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Check if control points are outside triangle bounds
+         */
+        function controlPointsOutsideTriangle(tri, cp1x, cp1y, cp2x, cp2y) {
+            const inside1 = pointInTriangle(
+                cp1x, cp1y,
+                tri.v1.x, tri.v1.y,
+                tri.v2.x, tri.v2.y,
+                tri.third.x, tri.third.y
+            );
+
+            const inside2 = pointInTriangle(
+                cp2x, cp2y,
+                tri.v1.x, tri.v1.y,
+                tri.v2.x, tri.v2.y,
+                tri.third.x, tri.third.y
+            );
+
+            return !inside1 || !inside2;
+        }
+
+        /**
+         * Check if guide triangle edges intersect (invalid geometry)
+         */
+        function triangleEdgesIntersect(triangles) {
+            // Check each triangle's edges against all other triangles
+            for (let i = 0; i < triangles.length; i++) {
+                const tri1 = triangles[i];
+
+                for (let j = i + 1; j < triangles.length; j++) {
+                    const tri2 = triangles[j];
+
+                    // Check all edge combinations
+                    const edges1 = [
+                        [tri1.v1, tri1.third],
+                        [tri1.v2, tri1.third]
+                    ];
+
+                    const edges2 = [
+                        [tri2.v1, tri2.third],
+                        [tri2.v2, tri2.third]
+                    ];
+
+                    for (const [a, b] of edges1) {
+                        for (const [c, d] of edges2) {
+                            if (lineSegmentsIntersect(
+                                a.x, a.y, b.x, b.y,
+                                c.x, c.y, d.x, d.y
+                            )) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Calculate minimum distance between a point and a line segment
+         */
+        function pointToSegmentDistance(px, py, ax, ay, bx, by) {
+            const dx = bx - ax;
+            const dy = by - ay;
+            const lengthSquared = dx * dx + dy * dy;
+
+            if (lengthSquared === 0) {
+                return Math.sqrt((px - ax) * (px - ax) + (py - ay) * (py - ay));
+            }
+
+            let t = ((px - ax) * dx + (py - ay) * dy) / lengthSquared;
+            t = Math.max(0, Math.min(1, t));
+
+            const closestX = ax + t * dx;
+            const closestY = ay + t * dy;
+
+            return Math.sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
+        }
+
+        // ===== VALIDITY CHECKING =====
+
+        /**
+         * Comprehensive validity check that returns score and issues
+         */
+        function checkValidity(state, triangles, lobeData) {
+            const issues = [];
+            const warnings = [];
+            let score = 100;
+
+            // 1. Check for triangle edge intersections
+            if (triangleEdgesIntersect(triangles)) {
+                issues.push('Guide triangle edges intersect');
+                score -= 40;
+            }
+
+            // 2. Check each lobe
+            lobeData.forEach((lobe, i) => {
+                const tri = triangles[i];
+
+                // Check control points outside triangle
+                const outside = controlPointsOutsideTriangle(
+                    tri,
+                    lobe.cp1x, lobe.cp1y,
+                    lobe.cp2x, lobe.cp2y
+                );
+
+                if (outside) {
+                    warnings.push(`Lobe ${i + 1}: Control points outside triangle`);
+                    score -= 5;
+                }
+
+                // Check for self-intersection
+                const selfIntersect = bezierSelfIntersects(
+                    lobe.v1x, lobe.v1y,
+                    lobe.cp1x, lobe.cp1y,
+                    lobe.cp2x, lobe.cp2y,
+                    lobe.v2x, lobe.v2y
+                );
+
+                if (selfIntersect) {
+                    issues.push(`Lobe ${i + 1}: Curve self-intersects`);
+                    score -= 15;
+                }
+
+                // Check if control points are too close to opposite edge
+                const dist1 = pointToSegmentDistance(
+                    lobe.cp1x, lobe.cp1y,
+                    tri.v2.x, tri.v2.y,
+                    tri.third.x, tri.third.y
+                );
+
+                const dist2 = pointToSegmentDistance(
+                    lobe.cp2x, lobe.cp2y,
+                    tri.v1.x, tri.v1.y,
+                    tri.third.x, tri.third.y
+                );
+
+                const minSafeDistance = 5;
+                if (dist1 < minSafeDistance || dist2 < minSafeDistance) {
+                    warnings.push(`Lobe ${i + 1}: Control point near edge`);
+                    score -= 3;
+                }
+            });
+
+            // 3. Check for extreme parameter values
+            if (state.curveFactor < -2.5 || state.curveFactor > 0.8) {
+                warnings.push('Extreme curve factor value');
+                score -= 5;
+            }
+
+            if (state.handleAngle < 20 || state.handleAngle > 160) {
+                warnings.push('Extreme handle angle');
+                score -= 5;
+            }
+
+            // Clamp score
+            score = Math.max(0, Math.min(100, score));
+
+            return {
+                score,
+                issues,
+                warnings,
+                isValid: score >= 70,
+                isWarning: score >= 40 && score < 70,
+                isError: score < 40
+            };
+        }
+
+        // ===== CONSTRAINT RECOMMENDATIONS =====
+
+        let savedConstraints = {};
+
+        function generateRecommendations(state, validity) {
+            const recommendations = [];
+
+            if (validity.isValid) {
+                recommendations.push({
+                    type: 'good',
+                    message: 'Current parameters produce valid geometry'
+                });
+            }
+
+            // Recommend safe ranges based on n
+            const n = state.sides;
+            const safeRanges = calculateSafeRanges(n);
+
+            if (state.curveFactor < safeRanges.curveMin || state.curveFactor > safeRanges.curveMax) {
+                recommendations.push({
+                    type: 'warning',
+                    message: `For n=${n}, try curve factor between ${safeRanges.curveMin.toFixed(2)} and ${safeRanges.curveMax.toFixed(2)}`
+                });
+            }
+
+            if (state.handleAngle < safeRanges.angleMin || state.handleAngle > safeRanges.angleMax) {
+                recommendations.push({
+                    type: 'warning',
+                    message: `For n=${n}, try handle angle between ${safeRanges.angleMin}° and ${safeRanges.angleMax}°`
+                });
+            }
+
+            return recommendations;
+        }
+
+        /**
+         * Calculate safe parameter ranges based on number of sides
+         */
+        function calculateSafeRanges(n) {
+            // More sides = need gentler curves and narrower angles
+            const curveMin = Math.max(-2.5, -3 + (n - 3) * 0.15);
+            const curveMax = Math.min(0.8, 1 - (n - 3) * 0.05);
+
+            const angleMin = Math.max(15, 20 + (n - 3) * 2);
+            const angleMax = Math.min(140, 120 - (n - 3) * 5);
+
+            return {
+                curveMin,
+                curveMax,
+                angleMin,
+                angleMax
+            };
+        }
+
+        /**
+         * Capture current parameters as constraints for this n value
+         */
+        function captureConstraints() {
+            const state = getCurrentState();
+            const n = state.sides;
+
+            savedConstraints[n] = {
+                n: n,
+                curveFactor: state.curveFactor,
+                handleAngle: state.handleAngle,
+                rotation: state.rotation,
+                timestamp: new Date().toISOString()
+            };
+
+            updateSavedConstraintsDisplay();
+
+            // Highlight capture area briefly
+            const capture = document.getElementById('current-capture');
+            capture.classList.add('active');
+            setTimeout(() => capture.classList.remove('active'), 1000);
+        }
+
+        function updateSavedConstraintsDisplay() {
+            const container = document.getElementById('saved-constraints');
+
+            if (Object.keys(savedConstraints).length === 0) {
+                container.innerHTML = '<p style="font-size: 12px; color: #888;">No saved constraints yet.</p>';
+                return;
+            }
+
+            let html = '';
+            Object.values(savedConstraints).sort((a, b) => a.n - b.n).forEach(constraint => {
+                html += `
+                    <div class="saved-constraint">
+                        <div class="saved-constraint-header">
+                            <span class="saved-constraint-title">n = ${constraint.n}</span>
+                            <div>
+                                <button class="apply-btn" onclick="applyConstraint(${constraint.n})">Apply</button>
+                                <button class="delete-btn" onclick="deleteConstraint(${constraint.n})">×</button>
+                            </div>
+                        </div>
+                        <div class="saved-constraint-data">
+                            Curve: ${constraint.curveFactor.toFixed(2)}<br>
+                            Angle: ${constraint.handleAngle}°<br>
+                            Rotation: ${constraint.rotation}°
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function applyConstraint(n) {
+            const constraint = savedConstraints[n];
+            if (!constraint) return;
+
+            document.getElementById('sides').value = constraint.n;
+            document.getElementById('curve-factor').value = constraint.curveFactor;
+            document.getElementById('handle-angle').value = constraint.handleAngle;
+            document.getElementById('rotation').value = constraint.rotation;
+
+            updatePreview();
+        }
+
+        function deleteConstraint(n) {
+            delete savedConstraints[n];
+            updateSavedConstraintsDisplay();
+        }
+
+        // ===== RENDERING =====
+
+        let currentValidity = null;
+        let currentTriangles = null;
+        let currentLobeData = null;
+
+        function getCurrentState() {
+            return {
+                sides: parseInt(document.getElementById('sides').value),
+                curveFactor: parseFloat(document.getElementById('curve-factor').value),
+                handleAngle: parseFloat(document.getElementById('handle-angle').value),
+                rotation: parseFloat(document.getElementById('rotation').value),
+                showGuides: document.getElementById('show-guides').checked,
+                showProblems: document.getElementById('show-problems').checked
+            };
+        }
+
+        function updatePreview() {
+            const state = getCurrentState();
+
+            // Update value displays
+            document.getElementById('sides-value').textContent = state.sides;
+            document.getElementById('curve-value').textContent = state.curveFactor.toFixed(2);
+            document.getElementById('handle-angle-value').textContent = state.handleAngle + '°';
+            document.getElementById('rotation-value').textContent = state.rotation + '°';
+
+            // Generate geometry
+            const geometry = generateGeometry(state);
+            currentTriangles = geometry.triangles;
+            currentLobeData = geometry.lobeData;
+
+            // Check validity
+            currentValidity = checkValidity(state, geometry.triangles, geometry.lobeData);
+
+            // Generate SVG
+            const svg = generateFlowAngleSVG(state, geometry, currentValidity);
+            document.getElementById('svg-preview').innerHTML = svg;
+
+            // Update validity display
+            updateValidityDisplay(currentValidity);
+
+            // Update recommendations
+            updateRecommendations(state, currentValidity);
+
+            // Update capture display
+            updateCaptureDisplay(state);
+
+            // Update detection details
+            updateDetectionDetails(geometry, currentValidity);
+        }
+
+        function generateGeometry(state, size = 600) {
+            const center = { x: size / 2, y: size / 2 };
+            const radius = size * 0.30;
+            const vertices = [];
+            const angleStep = (2 * Math.PI) / state.sides;
+            const rotRad = (state.rotation * Math.PI) / 180;
+
+            // Calculate vertices
+            for (let i = 0; i < state.sides; i++) {
+                const angle = rotRad + i * angleStep;
+                vertices.push({
+                    x: center.x + radius * Math.cos(angle),
+                    y: center.y + radius * Math.sin(angle)
+                });
+            }
+
+            // Build triangles
+            const triangles = [];
+            const apexAngle = (state.handleAngle * Math.PI) / 180;
+
+            for (let i = 0; i < state.sides; i++) {
+                const v1 = vertices[i];
+                const v2 = vertices[(i + 1) % state.sides];
+                const midX = (v1.x + v2.x) / 2;
+                const midY = (v1.y + v2.y) / 2;
+                const dx = v2.x - v1.x;
+                const dy = v2.y - v1.y;
+                const baseLength = Math.sqrt(dx * dx + dy * dy);
+                const perpX = dy;
+                const perpY = -dx;
+                const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
+                const height = (baseLength / 2) / Math.tan(apexAngle / 2);
+                const thirdX = midX + (perpX / perpLength) * height;
+                const thirdY = midY + (perpY / perpLength) * height;
+
+                triangles.push({ v1, v2, third: { x: thirdX, y: thirdY } });
+            }
+
+            // Build lobe data
+            const lobeData = [];
+            for (let i = 0; i < state.sides; i++) {
+                const tri = triangles[i];
+                const cp1x = tri.v1.x + (tri.third.x - tri.v1.x) * state.curveFactor;
+                const cp1y = tri.v1.y + (tri.third.y - tri.v1.y) * state.curveFactor;
+                const cp2x = tri.v2.x + (tri.third.x - tri.v2.x) * state.curveFactor;
+                const cp2y = tri.v2.y + (tri.third.y - tri.v2.y) * state.curveFactor;
+
+                lobeData.push({
+                    v1x: tri.v1.x,
+                    v1y: tri.v1.y,
+                    v2x: tri.v2.x,
+                    v2y: tri.v2.y,
+                    cp1x,
+                    cp1y,
+                    cp2x,
+                    cp2y
+                });
+            }
+
+            return {
+                center,
+                radius,
+                vertices,
+                triangles,
+                lobeData
+            };
+        }
+
+        function generateFlowAngleSVG(state, geometry, validity) {
+            const size = 600;
+            let shapes = '';
+
+            // Draw guide triangles
+            if (state.showGuides) {
+                geometry.triangles.forEach(tri => {
+                    const color = validity.isError ? '#ef4444' : validity.isWarning ? '#fbbf24' : '#6cf';
+                    shapes += `<polygon points="${tri.v1.x},${tri.v1.y} ${tri.v2.x},${tri.v2.y} ${tri.third.x},${tri.third.y}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="3,3" opacity="0.3"/>`;
+                });
+            }
+
+            // Draw lobes path
+            let pathData = `M ${geometry.vertices[0].x} ${geometry.vertices[0].y}`;
+
+            for (let i = 0; i < state.sides; i++) {
+                const lobe = geometry.lobeData[i];
+                const nextVertex = geometry.vertices[(i + 1) % state.sides];
+
+                pathData += ` C ${lobe.cp1x} ${lobe.cp1y}, ${lobe.cp2x} ${lobe.cp2y}, ${nextVertex.x} ${nextVertex.y}`;
+
+                // Draw control points and handles if guides shown
+                if (state.showGuides) {
+                    const tri = geometry.triangles[i];
+                    shapes += `<circle cx="${lobe.cp1x}" cy="${lobe.cp1y}" r="3" fill="#f66" opacity="0.8"/>`;
+                    shapes += `<circle cx="${lobe.cp2x}" cy="${lobe.cp2y}" r="3" fill="#6f6" opacity="0.8"/>`;
+                    shapes += `<line x1="${tri.v1.x}" y1="${tri.v1.y}" x2="${lobe.cp1x}" y2="${lobe.cp1y}" stroke="#f66" stroke-width="1" stroke-dasharray="2,2" opacity="0.4"/>`;
+                    shapes += `<line x1="${tri.v2.x}" y1="${tri.v2.y}" x2="${lobe.cp2x}" y2="${lobe.cp2y}" stroke="#6f6" stroke-width="1" stroke-dasharray="2,2" opacity="0.4"/>`;
+                }
+            }
+
+            // Style based on validity
+            let strokeColor = '#000080';
+            let fillColor = '#87ceeb';
+            let strokeWidth = 2;
+
+            if (state.showProblems) {
+                if (validity.isError) {
+                    strokeColor = '#ef4444';
+                    fillColor = 'rgba(239, 68, 68, 0.3)';
+                    strokeWidth = 3;
+                } else if (validity.isWarning) {
+                    strokeColor = '#fbbf24';
+                    fillColor = 'rgba(251, 191, 36, 0.3)';
+                    strokeWidth = 2;
+                } else {
+                    strokeColor = '#4ade80';
+                    fillColor = 'rgba(74, 222, 128, 0.3)';
+                }
+            }
+
+            shapes += `<path d="${pathData} Z" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}" opacity="0.8"/>`;
+
+            return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${shapes}</svg>`;
+        }
+
+        function updateValidityDisplay(validity) {
+            const scoreEl = document.getElementById('validity-score');
+            const messagesEl = document.getElementById('validity-messages');
+
+            scoreEl.textContent = validity.score + '%';
+
+            // Update color
+            scoreEl.className = '';
+            if (validity.isValid) {
+                scoreEl.classList.add('valid');
+            } else if (validity.isWarning) {
+                scoreEl.classList.add('warning');
+            } else {
+                scoreEl.classList.add('error');
+            }
+
+            // Build messages
+            let html = '';
+
+            if (validity.issues.length === 0 && validity.warnings.length === 0) {
+                html = '<div class="validity-good">All checks passed</div>';
+            }
+
+            validity.issues.forEach(issue => {
+                html += `<div class="validity-issue">❌ ${issue}</div>`;
+            });
+
+            validity.warnings.forEach(warning => {
+                html += `<div class="validity-warning">⚠️ ${warning}</div>`;
+            });
+
+            messagesEl.innerHTML = html;
+        }
+
+        function updateRecommendations(state, validity) {
+            const recommendations = generateRecommendations(state, validity);
+            const container = document.getElementById('recommendations');
+
+            let html = '';
+            recommendations.forEach(rec => {
+                const className = rec.type === 'good' ? 'validity-good' :
+                                rec.type === 'warning' ? 'validity-warning' :
+                                'validity-issue';
+                html += `<div class="${className}">${rec.message}</div>`;
+            });
+
+            container.innerHTML = html || '<p style="font-size: 12px; color: #888;">No recommendations</p>';
+        }
+
+        function updateCaptureDisplay(state) {
+            const n = state.sides;
+            const safeRanges = calculateSafeRanges(n);
+
+            document.getElementById('capture-n').textContent = n;
+            document.getElementById('capture-curve').textContent = `-3.00 to 1.00`;
+            document.getElementById('capture-angle').textContent = `10° to 170°`;
+            document.getElementById('safe-curve').textContent =
+                `${safeRanges.curveMin.toFixed(2)} to ${safeRanges.curveMax.toFixed(2)}`;
+            document.getElementById('safe-angle').textContent =
+                `${safeRanges.angleMin}° to ${safeRanges.angleMax}°`;
+        }
+
+        function updateDetectionDetails(geometry, validity) {
+            const container = document.getElementById('detection-info');
+
+            let html = `
+                <strong>Geometry:</strong><br>
+                Vertices: ${geometry.vertices.length}<br>
+                Triangles: ${geometry.triangles.length}<br>
+                <br>
+                <strong>Checks Run:</strong><br>
+                ✓ Triangle edge intersections<br>
+                ✓ Control points in bounds<br>
+                ✓ Bezier self-intersection<br>
+                ✓ Control point proximity<br>
+                ✓ Parameter extremes<br>
+                <br>
+                <strong>Result:</strong><br>
+                Score: ${validity.score}%<br>
+                Issues: ${validity.issues.length}<br>
+                Warnings: ${validity.warnings.length}<br>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function loadPreset(name) {
+            const presets = {
+                triquetra: { sides: 3, curveFactor: -0.66, handleAngle: 60, rotation: 0 },
+                flower: { sides: 6, curveFactor: -0.8, handleAngle: 30, rotation: 0 },
+                star: { sides: 5, curveFactor: -1.2, handleAngle: 36, rotation: 18 },
+                smooth: { sides: 8, curveFactor: -0.5, handleAngle: 22.5, rotation: 0 }
+            };
+
+            const preset = presets[name];
+            if (preset) {
+                document.getElementById('sides').value = preset.sides;
+                document.getElementById('curve-factor').value = preset.curveFactor;
+                document.getElementById('handle-angle').value = preset.handleAngle;
+                document.getElementById('rotation').value = preset.rotation;
+                updatePreview();
+            }
+        }
+
+        // Initialize
+        updatePreview();
+        updateSavedConstraintsDisplay();
+    </script>
+</body>
+</html>
