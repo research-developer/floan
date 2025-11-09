@@ -1,5 +1,38 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.vercel
+
 # Generated SVG outputs
 outputs/*.svg
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dev-debug.log
+
+# Testing
+coverage/
+.nyc_output/
+
+# Cache directories
+.cache/
+.parcel-cache/
+.turbo/
 
 # Python artifacts
 __pycache__/
@@ -12,21 +45,43 @@ __pycache__/
 venv/
 env/
 ENV/
-.venv
+.venv/
 
-# IDE
+# Distribution / packaging
+*.egg-info/
+
+# IDE & Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# OS
+# AI Tool configs (uncomment if you want to ignore these)
+# .claude/
+# .cursor/
+# .gemini/
+# .windsurf/
+# .mcp.json
+# CLAUDE.md
+# GEMINI.md
+# AGENTS.md
+
+# OS specific
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-.vercel
+# Task Master files (uncomment to exclude from version control)
+# .taskmaster/
+# tasks.json
+# tasks/
