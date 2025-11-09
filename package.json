@@ -1,0 +1,26 @@
+{
+  "name": "svgen-flowangle-studio",
+  "version": "1.0.0",
+  "description": "FlowAngle Animation Studio with Vercel KV sharing",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step needed'",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@vercel/kv": "^1.0.1",
+    "nanoid": "^5.0.4"
+  },
+  "devDependencies": {
+    "vercel": "^33.0.0"
+  },
+  "keywords": [
+    "svg",
+    "animation",
+    "flowangle",
+    "vercel"
+  ],
+  "author": "",
+  "license": "MIT"
+}
