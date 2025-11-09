@@ -328,9 +328,9 @@
             <div class="widget">
                 <div class="widget-label">
                     <span>Sides / Count</span>
-                    <span class="widget-value" id="sides-value">6</span>
+                    <span class="widget-value" id="sides-value">3</span>
                 </div>
-                <input type="range" id="sides" min="3" max="12" value="6" oninput="updatePreview()">
+                <input type="range" id="sides" min="1" max="12" value="3" oninput="updatePreview()">
             </div>
 
             <div class="widget">
@@ -443,9 +443,9 @@
             const strokeWidth = parseFloat(document.getElementById('stroke-width').value);
             const opacity = parseFloat(document.getElementById('opacity').value);
 
-            // Adjust curve factor range based on n (inversely correlated)
+            // Adjust curve factor range based on n (more negative as n increases)
             const curveSlider = document.getElementById('curve-factor');
-            const minCurve = -3.0 / sides; // Inversely proportional to n
+            const minCurve = -2.0 * sides; // Proportional to n (more negative as n increases)
             curveSlider.min = minCurve;
 
             // Clamp current value if it's below new minimum
@@ -513,6 +513,11 @@
         }
 
         function drawFlowAngle(center, radius, sides, rotation, curveFactor, showGuides, fill, stroke, strokeWidth, opacity) {
+            // Special case for n=1: just a circle
+            if (sides === 1) {
+                return `<circle cx="${center.x}" cy="${center.y}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" opacity="${opacity}"/>`;
+            }
+
             // Calculate polygon vertices
             const vertices = [];
             const angleStep = (2 * Math.PI) / sides;
@@ -526,9 +531,38 @@
 
             let shapes = '';
 
-            // For each edge, create isosceles triangle with apex angle = 180°/n
+            // Special case for n=2: just a curved path between two points
+            if (sides === 2) {
+                const v1 = vertices[0];
+                const v2 = vertices[1];
+                const midX = (v1.x + v2.x) / 2;
+                const midY = (v1.y + v2.y) / 2;
+
+                // Perpendicular offset for curve
+                const dx = v2.x - v1.x;
+                const dy = v2.y - v1.y;
+                const perpX = dy;
+                const perpY = -dx;
+                const baseLength = Math.sqrt(dx * dx + dy * dy);
+                const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
+
+                // Control points perpendicular to the line
+                const offset = (baseLength / 2) * curveFactor;
+                const cpX = midX + (perpX / perpLength) * offset;
+                const cpY = midY + (perpY / perpLength) * offset;
+
+                if (showGuides) {
+                    shapes += `<circle cx="${cpX}" cy="${cpY}" r="3" fill="#f66" opacity="0.6"/>`;
+                    shapes += `<line x1="${midX}" y1="${midY}" x2="${cpX}" y2="${cpY}" stroke="#f66" stroke-width="1" stroke-dasharray="2,2" opacity="0.4"/>`;
+                }
+
+                shapes += `<path d="M ${v1.x} ${v1.y} Q ${cpX} ${cpY}, ${v2.x} ${v2.y}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" opacity="${opacity}"/>`;
+                return shapes;
+            }
+
+            // For each edge, create isosceles triangle with apex angle increasing with n
             const triangles = [];
-            const apexAngle = Math.PI / sides; // 180°/n in radians
+            const apexAngle = Math.PI * (1 - 1 / sides); // 180° * (1 - 1/n) in radians
 
             for (let i = 0; i < sides; i++) {
                 const v1 = vertices[i];
