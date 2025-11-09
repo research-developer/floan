@@ -1,9 +1,14 @@
 {
   "version": 2,
-  "public": true,
+  "buildCommand": null,
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/",
+      "destination": "/flowangle_animation.html"
+    },
+    {
+      "source": "/share/:id",
       "destination": "/flowangle_animation.html"
     }
   ],
