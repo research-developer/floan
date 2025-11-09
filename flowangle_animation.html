@@ -952,7 +952,27 @@
                 curveFactor: parseFloat(document.getElementById('curve-factor').value),
                 handleAngle: parseFloat(document.getElementById('handle-angle').value),
                 rotation: parseFloat(document.getElementById('rotation').value),
-                showGuides: document.getElementById('show-guides').checked
+                showGuides: document.getElementById('show-guides').checked,
+                pulseSettings: {
+                    curve: {
+                        enabled: document.getElementById('pulse-curve-enabled').checked,
+                        range: parseFloat(document.getElementById('pulse-curve-range').value),
+                        speed: parseFloat(document.getElementById('pulse-curve-speed').value),
+                        easing: document.getElementById('pulse-curve-easing').value
+                    },
+                    angle: {
+                        enabled: document.getElementById('pulse-angle-enabled').checked,
+                        range: parseFloat(document.getElementById('pulse-angle-range').value),
+                        speed: parseFloat(document.getElementById('pulse-angle-speed').value),
+                        easing: document.getElementById('pulse-angle-easing').value
+                    },
+                    rotation: {
+                        enabled: document.getElementById('pulse-rotation-enabled').checked,
+                        range: parseFloat(document.getElementById('pulse-rotation-range').value),
+                        speed: parseFloat(document.getElementById('pulse-rotation-speed').value),
+                        easing: document.getElementById('pulse-rotation-easing').value
+                    }
+                }
             };
         }
 
@@ -962,6 +982,39 @@
             document.getElementById('handle-angle').value = state.handleAngle;
             document.getElementById('rotation').value = state.rotation;
             document.getElementById('show-guides').checked = state.showGuides;
+
+            // Apply pulse settings if present
+            if (state.pulseSettings) {
+                const ps = state.pulseSettings;
+
+                // Curve pulse
+                if (ps.curve) {
+                    document.getElementById('pulse-curve-enabled').checked = ps.curve.enabled;
+                    document.getElementById('pulse-curve-range').value = ps.curve.range;
+                    document.getElementById('pulse-curve-speed').value = ps.curve.speed;
+                    document.getElementById('pulse-curve-easing').value = ps.curve.easing;
+                }
+
+                // Angle pulse
+                if (ps.angle) {
+                    document.getElementById('pulse-angle-enabled').checked = ps.angle.enabled;
+                    document.getElementById('pulse-angle-range').value = ps.angle.range;
+                    document.getElementById('pulse-angle-speed').value = ps.angle.speed;
+                    document.getElementById('pulse-angle-easing').value = ps.angle.easing;
+                }
+
+                // Rotation pulse
+                if (ps.rotation) {
+                    document.getElementById('pulse-rotation-enabled').checked = ps.rotation.enabled;
+                    document.getElementById('pulse-rotation-range').value = ps.rotation.range;
+                    document.getElementById('pulse-rotation-speed').value = ps.rotation.speed;
+                    document.getElementById('pulse-rotation-easing').value = ps.rotation.easing;
+                }
+
+                // Update pulse animations to match restored state
+                updatePulseAnimations();
+            }
+
             updatePreview();
         }
 
@@ -1305,6 +1358,29 @@
             params.set('r', state.rotation);
             params.set('g', state.showGuides ? '1' : '0');
 
+            // Add pulse settings with compact names
+            if (state.pulseSettings) {
+                const ps = state.pulseSettings;
+
+                // Curve pulse (pc* = pulse curve)
+                params.set('pce', ps.curve.enabled ? '1' : '0');
+                params.set('pcr', ps.curve.range.toFixed(2));
+                params.set('pcs', ps.curve.speed.toFixed(1));
+                params.set('pct', ps.curve.easing);
+
+                // Angle pulse (pa* = pulse angle)
+                params.set('pae', ps.angle.enabled ? '1' : '0');
+                params.set('par', ps.angle.range);
+                params.set('pas', ps.angle.speed.toFixed(1));
+                params.set('pat', ps.angle.easing);
+
+                // Rotation pulse (pr* = pulse rotation)
+                params.set('pre', ps.rotation.enabled ? '1' : '0');
+                params.set('prr', ps.rotation.range);
+                params.set('prs', ps.rotation.speed.toFixed(1));
+                params.set('prt', ps.rotation.easing);
+            }
+
             // Optionally encode keyframes (if any exist and requested)
             if (includeKeyframes && keyframes.length > 0) {
                 try {
@@ -1389,6 +1465,31 @@
                     stateLoaded = true;
                 }
 
+                // Parse pulse settings if present
+                if (params.has('pce')) {
+                    // Curve pulse
+                    document.getElementById('pulse-curve-enabled').checked = params.get('pce') === '1';
+                    if (params.has('pcr')) document.getElementById('pulse-curve-range').value = parseFloat(params.get('pcr'));
+                    if (params.has('pcs')) document.getElementById('pulse-curve-speed').value = parseFloat(params.get('pcs'));
+                    if (params.has('pct')) document.getElementById('pulse-curve-easing').value = params.get('pct');
+
+                    // Angle pulse
+                    document.getElementById('pulse-angle-enabled').checked = params.get('pae') === '1';
+                    if (params.has('par')) document.getElementById('pulse-angle-range').value = parseFloat(params.get('par'));
+                    if (params.has('pas')) document.getElementById('pulse-angle-speed').value = parseFloat(params.get('pas'));
+                    if (params.has('pat')) document.getElementById('pulse-angle-easing').value = params.get('pat');
+
+                    // Rotation pulse
+                    document.getElementById('pulse-rotation-enabled').checked = params.get('pre') === '1';
+                    if (params.has('prr')) document.getElementById('pulse-rotation-range').value = parseFloat(params.get('prr'));
+                    if (params.has('prs')) document.getElementById('pulse-rotation-speed').value = parseFloat(params.get('prs'));
+                    if (params.has('prt')) document.getElementById('pulse-rotation-easing').value = params.get('prt');
+
+                    // Update pulse animations with restored settings
+                    updatePulseAnimations();
+                    stateLoaded = true;
+                }
+
                 // Parse keyframes if present
                 if (params.has('kf')) {
                     try {
@@ -1450,6 +1551,34 @@
                 document.getElementById('rotation').value = config.rotation;
                 document.getElementById('show-guides').checked = config.showGuides;
 
+                // Load pulse settings if present
+                if (config.pulseSettings) {
+                    const ps = config.pulseSettings;
+
+                    if (ps.curve) {
+                        document.getElementById('pulse-curve-enabled').checked = ps.curve.enabled;
+                        document.getElementById('pulse-curve-range').value = ps.curve.range;
+                        document.getElementById('pulse-curve-speed').value = ps.curve.speed;
+                        document.getElementById('pulse-curve-easing').value = ps.curve.easing;
+                    }
+
+                    if (ps.angle) {
+                        document.getElementById('pulse-angle-enabled').checked = ps.angle.enabled;
+                        document.getElementById('pulse-angle-range').value = ps.angle.range;
+                        document.getElementById('pulse-angle-speed').value = ps.angle.speed;
+                        document.getElementById('pulse-angle-easing').value = ps.angle.easing;
+                    }
+
+                    if (ps.rotation) {
+                        document.getElementById('pulse-rotation-enabled').checked = ps.rotation.enabled;
+                        document.getElementById('pulse-rotation-range').value = ps.rotation.range;
+                        document.getElementById('pulse-rotation-speed').value = ps.rotation.speed;
+                        document.getElementById('pulse-rotation-easing').value = ps.rotation.easing;
+                    }
+
+                    updatePulseAnimations();
+                }
+
                 // Load keyframes if present
                 if (config.keyframes && config.keyframes.length > 0) {
                     keyframes = config.keyframes;
@@ -1492,6 +1621,7 @@
                     handleAngle: state.handleAngle,
                     rotation: state.rotation,
                     showGuides: state.showGuides,
+                    pulseSettings: state.pulseSettings,
                     keyframes: keyframes.length > 0 ? keyframes : undefined
                 };
 
