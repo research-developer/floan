@@ -358,6 +358,14 @@
             </div>
 
             <div class="widget">
+                <div class="widget-label">
+                    <span>Handle Angle (°)</span>
+                    <span class="widget-value" id="handle-angle-value">60</span>
+                </div>
+                <input type="range" id="handle-angle" min="10" max="170" step="1" value="60" oninput="updatePreview()">
+            </div>
+
+            <div class="widget">
                 <div class="checkbox-widget">
                     <input type="checkbox" id="show-guides" onchange="updatePreview()">
                     <span>Show Triangle Guides</span>
@@ -426,6 +434,68 @@
     </div>
 
     <script>
+        // Test function to verify triangle geometry
+        function testTriangleGeometry(sides, radius, rotation) {
+            console.log(`\n=== Testing FlowAngle Geometry for n=${sides} ===`);
+
+            // Calculate vertices
+            const vertices = [];
+            const angleStep = (2 * Math.PI) / sides;
+            for (let i = 0; i < sides; i++) {
+                const angle = rotation + i * angleStep;
+                const x = 300 + radius * Math.cos(angle);
+                const y = 300 + radius * Math.sin(angle);
+                vertices.push({ x, y });
+            }
+
+            // Calculate triangle apexes
+            const apexAngle = Math.PI / sides;
+            const apexPoints = [];
+
+            for (let i = 0; i < sides; i++) {
+                const v1 = vertices[i];
+                const v2 = vertices[(i + 1) % sides];
+                const midX = (v1.x + v2.x) / 2;
+                const midY = (v1.y + v2.y) / 2;
+                const dx = v2.x - v1.x;
+                const dy = v2.y - v1.y;
+                const baseLength = Math.sqrt(dx * dx + dy * dy);
+                const perpX = dy;
+                const perpY = -dx;
+                const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
+                const height = (baseLength / 2) / Math.tan(apexAngle / 2);
+                const thirdX = midX + (perpX / perpLength) * height;
+                const thirdY = midY + (perpY / perpLength) * height;
+
+                apexPoints.push({ x: thirdX, y: thirdY });
+
+                // Calculate triangle side lengths
+                const side1 = Math.sqrt((thirdX - v1.x)**2 + (thirdY - v1.y)**2);
+                const side2 = Math.sqrt((thirdX - v2.x)**2 + (thirdY - v2.y)**2);
+                const base = baseLength;
+
+                console.log(`Triangle ${i}:`);
+                console.log(`  Apex: (${thirdX.toFixed(1)}, ${thirdY.toFixed(1)})`);
+                console.log(`  Side 1: ${side1.toFixed(2)}, Side 2: ${side2.toFixed(2)}, Base: ${base.toFixed(2)}`);
+
+                if (sides === 3) {
+                    const isEquilateral = Math.abs(side1 - side2) < 0.01 && Math.abs(side1 - base) < 0.01;
+                    console.log(`  Equilateral: ${isEquilateral ? 'YES ✓' : 'NO ✗'}`);
+                }
+            }
+
+            // For n=3, check if all apexes converge to same point (center)
+            if (sides === 3) {
+                console.log('\nApex convergence test:');
+                const avgX = apexPoints.reduce((sum, p) => sum + p.x, 0) / apexPoints.length;
+                const avgY = apexPoints.reduce((sum, p) => sum + p.y, 0) / apexPoints.length;
+                console.log(`  Average apex: (${avgX.toFixed(1)}, ${avgY.toFixed(1)})`);
+                console.log(`  Expected center: (300, 300)`);
+                const convergesToCenter = Math.abs(avgX - 300) < 1 && Math.abs(avgY - 300) < 1;
+                console.log(`  Converges to center: ${convergesToCenter ? 'YES ✓' : 'NO ✗'}`);
+            }
+        }
+
         // Initialize
         updatePreview();
 
@@ -437,6 +507,7 @@
             const rotation = parseFloat(document.getElementById('rotation').value);
             const depth = parseInt(document.getElementById('depth').value);
             const curveFactor = parseFloat(document.getElementById('curve-factor').value);
+            const handleAngle = parseFloat(document.getElementById('handle-angle').value);
             const showGuides = document.getElementById('show-guides').checked;
             const fillColor = document.getElementById('fill-color').value;
             const strokeColor = document.getElementById('stroke-color').value;
@@ -459,20 +530,21 @@
             document.getElementById('rotation-value').textContent = rotation;
             document.getElementById('depth-value').textContent = depth;
             document.getElementById('curve-value').textContent = parseFloat(curveSlider.value).toFixed(2);
+            document.getElementById('handle-angle-value').textContent = handleAngle;
             document.getElementById('fill-value').textContent = fillColor;
             document.getElementById('stroke-value').textContent = strokeColor;
             document.getElementById('stroke-width-value').textContent = strokeWidth;
             document.getElementById('opacity-value').textContent = opacity.toFixed(1);
 
             // Generate SVG
-            const svg = generateSVG(pattern, size, sides, rotation, depth, parseFloat(curveSlider.value), showGuides, fillColor, strokeColor, strokeWidth, opacity);
+            const svg = generateSVG(pattern, size, sides, rotation, depth, parseFloat(curveSlider.value), handleAngle, showGuides, fillColor, strokeColor, strokeWidth, opacity);
             document.getElementById('svg-preview').innerHTML = svg;
 
             // Update code output
             updateCodeOutput(pattern, size, sides, rotation, depth, fillColor, strokeColor, strokeWidth, opacity);
         }
 
-        function generateSVG(pattern, size, sides, rotation, depth, curveFactor, showGuides, fill, stroke, strokeWidth, opacity) {
+        function generateSVG(pattern, size, sides, rotation, depth, curveFactor, handleAngle, showGuides, fill, stroke, strokeWidth, opacity) {
             const canvas = 600;
             const center = { x: canvas / 2, y: canvas / 2 };
             let shapes = '';
@@ -480,7 +552,7 @@
             const rotRad = (rotation * Math.PI) / 180;
 
             if (pattern === 'flowangle') {
-                shapes = drawFlowAngle(center, size, sides, rotRad, curveFactor, showGuides, fill, stroke, strokeWidth, opacity);
+                shapes = drawFlowAngle(center, size, sides, rotRad, curveFactor, handleAngle, showGuides, fill, stroke, strokeWidth, opacity);
             } else if (pattern === 'polygon') {
                 shapes = drawPolygon(center, size, sides, rotRad, fill, stroke, strokeWidth, opacity);
             } else if (pattern === 'triangle') {
@@ -512,7 +584,7 @@
             return `<polygon points="${points.join(' ')}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" opacity="${opacity}"/>`;
         }
 
-        function drawFlowAngle(center, radius, sides, rotation, curveFactor, showGuides, fill, stroke, strokeWidth, opacity) {
+        function drawFlowAngle(center, radius, sides, rotation, curveFactor, handleAngle, showGuides, fill, stroke, strokeWidth, opacity) {
             // Special case for n=1: just a circle
             if (sides === 1) {
                 return `<circle cx="${center.x}" cy="${center.y}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" opacity="${opacity}"/>`;
@@ -560,9 +632,9 @@
                 return shapes;
             }
 
-            // For each edge, create isosceles triangle with apex angle increasing with n
+            // For each edge, create isosceles triangle with user-controlled apex angle
             const triangles = [];
-            const apexAngle = Math.PI * (1 - 1 / sides); // 180° * (1 - 1/n) in radians
+            const apexAngle = (handleAngle * Math.PI) / 180; // Convert degrees to radians
 
             for (let i = 0; i < sides; i++) {
                 const v1 = vertices[i];
