@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Algorithmic Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        #container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            max-width: 1600px;
+        }
+        .svg-card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .svg-card h3 {
+            margin: 0 0 10px 0;
+            color: #6cf;
+        }
+        svg {
+            background: white;
+            border-radius: 4px;
+        }
+        #refresh {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #6cf;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #refresh:hover {
+            background: #8df;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔷 Algorithmic SVG Generator</h1>
+    <button id="refresh" onclick="location.reload()">↻ Refresh</button>
+    <div id="container"></div>
+    
+    <script>
+        // List of SVG files to display
+        const svgFiles = [
+            'experiment.svg',
+            'sierpinski.svg',
+            'mandala.svg',
+            'golden_spiral.svg',
+            'lsystem_tree.svg',
+            'sacred_geometry.svg',
+            'penrose.svg',
+            'harmonic_circle.svg',
+            'manifold_projection.svg',
+            'tensor_subdivision.svg',
+            'alphabet_kernel.svg',
+            'fibonacci_manifold.svg'
+        ];
+        
+        const container = document.getElementById('container');
+        
+        svgFiles.forEach(async (filename) => {
+            try {
+                const response = await fetch(`outputs/${filename}`);
+                if (response.ok) {
+                    const svgText = await response.text();
+                    const card = document.createElement('div');
+                    card.className = 'svg-card';
+                    card.innerHTML = `
+                        <h3>${filename}</h3>
+                        ${svgText}
+                    `;
+                    container.appendChild(card);
+                }
+            } catch (e) {
+                console.log(`Could not load ${filename}`);
+            }
+        });
+    </script>
+</body>
+</html>
