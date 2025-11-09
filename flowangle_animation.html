@@ -554,9 +554,9 @@
             }
         }
 
-        function generateFlowAngle(state, size = 400) {
+        function generateFlowAngle(state, size = 600) {
             const center = { x: size / 2, y: size / 2 };
-            const radius = size * 0.35;
+            const radius = size * 0.30;
             const vertices = [];
             const angleStep = (2 * Math.PI) / state.sides;
             const rotRad = (state.rotation * Math.PI) / 180;
@@ -672,7 +672,7 @@
 
                 const thumbnail = document.createElement('div');
                 thumbnail.className = 'keyframe-thumbnail';
-                thumbnail.innerHTML = generateFlowAngle(kf, 100);
+                thumbnail.innerHTML = generateFlowAngle(kf, 120);
 
                 const label = document.createElement('div');
                 label.className = 'keyframe-label';
