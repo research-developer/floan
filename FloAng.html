@@ -27,7 +27,7 @@
         <div class="control-group">
             <label class="control-label">Sides (n)</label>
             <div style="display: flex; align-items: center; gap: 10px;">
-                <input type="range" id="sides" min="1" max="12" value="3" oninput="updatePreview()">
+                <input type="range" id="sides" min="1" max="12" value="3" oninput="updateSidesAndAngleRange()">
                 <span class="control-value" id="sides-value">3</span>
             </div>
         </div>
@@ -42,9 +42,13 @@
 
         <div class="control-group">
             <label class="control-label">Angle</label>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <input type="range" id="handle-angle" min="10" max="170" step="1" value="60" oninput="updatePreview()">
+            <div style="display: flex; align-items: center; gap: 10px; position: relative;">
+                <div style="position: relative; flex: 1;">
+                    <input type="range" id="handle-angle" min="10" max="170" step="1" value="60" oninput="updateAngleSlider()" style="width: 100%;">
+                    <div id="angle-center-tick" style="position: absolute; top: 50%; left: 50%; width: 2px; height: 20px; background: #6cf; transform: translate(-50%, -50%); pointer-events: none; z-index: 1;"></div>
+                </div>
                 <span class="control-value" id="handle-angle-value">60°</span>
+                <span class="control-value" id="orthogonal-indicator" style="color: #6cf; font-size: 11px; min-width: 60px;">(⊥ 60°)</span>
             </div>
         </div>
 
@@ -522,7 +526,8 @@
                 }
             }
 
-            updatePreview();
+            // Initialize angle slider range based on loaded sides value
+            updateSidesAndAngleRange();
             updatePulseAnimations();
         });
 
@@ -618,6 +623,61 @@
                 updatePulseAnimations();
             }
 
+            updatePreview();
+        }
+
+        function updateSidesAndAngleRange() {
+            const n = parseInt(document.getElementById('sides').value);
+
+            // Calculate orthogonal angle using interior angle formula: (n - 2) × 180 / n
+            const orthogonalAngle = (n - 2) * 180 / n;
+
+            // Set slider range centered on orthogonal angle (±80° range)
+            const range = 80;
+            const minAngle = Math.max(10, orthogonalAngle - range);
+            const maxAngle = Math.min(170, orthogonalAngle + range);
+
+            const angleSlider = document.getElementById('handle-angle');
+            angleSlider.min = minAngle;
+            angleSlider.max = maxAngle;
+
+            // If current angle is outside new range, set to orthogonal
+            const currentAngle = parseFloat(angleSlider.value);
+            if (currentAngle < minAngle || currentAngle > maxAngle) {
+                angleSlider.value = orthogonalAngle;
+            }
+
+            // Update orthogonal indicator
+            document.getElementById('orthogonal-indicator').textContent = `(⊥ ${orthogonalAngle.toFixed(1)}°)`;
+
+            // Update the UI
+            updateAngleSlider();
+        }
+
+        function updateAngleSlider() {
+            const n = parseInt(document.getElementById('sides').value);
+            const orthogonalAngle = (n - 2) * 180 / n;
+            const currentAngle = parseFloat(document.getElementById('handle-angle').value);
+
+            const angleSlider = document.getElementById('handle-angle');
+
+            // Check if we're at orthogonal angle (within 0.5° tolerance)
+            const isOrthogonal = Math.abs(currentAngle - orthogonalAngle) < 0.5;
+
+            // Apply green styling when at orthogonal
+            if (isOrthogonal) {
+                angleSlider.style.accentColor = '#0f0';
+            } else {
+                angleSlider.style.accentColor = '';
+            }
+
+            // Update display value
+            document.getElementById('handle-angle-value').textContent = currentAngle.toFixed(0) + '°';
+
+            // Update sides value display
+            document.getElementById('sides-value').textContent = n;
+
+            // Trigger preview update
             updatePreview();
         }
 
