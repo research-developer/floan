@@ -2391,14 +2391,27 @@
                     event.preventDefault();
 
                     // Track when key was first pressed (for easing)
-                    if (!pressedKeys.has(event.key)) {
+                    const isFirstPress = !pressedKeys.has(event.key);
+                    if (isFirstPress) {
                         keyPressTimes.set(event.key, performance.now());
+
+                        // Apply immediate action on first press (single tap support)
+                        switch(event.key) {
+                            case 'ArrowUp': adjustFlow(0.01); break;
+                            case 'ArrowDown': adjustFlow(-0.01); break;
+                            case 'ArrowLeft': adjustAngle(-1); break;
+                            case 'ArrowRight': adjustAngle(1); break;
+                            case '.':
+                            case '>': adjustSides(1); break;
+                            case ',':
+                            case '<': adjustSides(-1); break;
+                        }
                     }
 
                     pressedKeys.add(event.key);
                     showKeyboardHint(event.key);
 
-                    // Start animation loop if not already running
+                    // Start animation loop if not already running (for holding)
                     if (!keyboardAnimationFrame) {
                         keyboardAnimationFrame = requestAnimationFrame(updateFromKeyboard);
                     }
