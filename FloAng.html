@@ -250,15 +250,17 @@
         <div id="canvas-area">
             <div id="svg-preview"></div>
             <div id="keyboard-hint" class="keyboard-hint"></div>
-        </div>
-    </div>
 
-    <!-- Keyboard Shortcuts Help -->
-    <div class="keyboard-shortcuts">
-        <h4>⌨️ Keyboard</h4>
-        <div class="shortcut"><span class="key">↑↓</span> <span>Flow</span></div>
-        <div class="shortcut"><span class="key">←→</span> <span>Angle</span></div>
-        <div class="shortcut"><span class="key">, .</span> <span>Sides</span></div>
+            <!-- Keyboard Shortcuts Help -->
+            <div class="keyboard-shortcuts collapsed" id="keyboard-shortcuts">
+                <h4 onclick="toggleKeyboardShortcuts()">⌨️</h4>
+                <div class="shortcuts-content">
+                    <div class="shortcut"><span class="key">↑↓</span> <span>Flow</span></div>
+                    <div class="shortcut"><span class="key">←→</span> <span>Angle</span></div>
+                    <div class="shortcut"><span class="key">, .</span> <span>Sides</span></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Pulse Animation Controls -->
@@ -2456,6 +2458,11 @@
                     }, 800);
                 }
             }
+        }
+
+        function toggleKeyboardShortcuts() {
+            const shortcutsEl = document.getElementById('keyboard-shortcuts');
+            shortcutsEl.classList.toggle('collapsed');
         }
 
         // Initialize on load
