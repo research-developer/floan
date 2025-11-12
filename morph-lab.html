@@ -490,11 +490,12 @@
          * - initialRatio: 0.2 → maintains smooth curve continuity at insertion
          * - Removed result.applyParams() call → was causing abrupt angle changes to ALL anchors
          * - Changed from toOrthogonal to currentAngle → gradually interpolates angle instead of immediate jump
+         * - Angle starts at 50% midpoint → acknowledges new anchor already inserted, not at fromOrthogonal
          * - Added handle recalculation for ALL anchors using currentAngle → fixes asymmetry
          * - Separate apex calculations for handleIn and handleOut → proper bezier curve formation
          * - Skip emergingAnchor in handle loop → prevents double-setting anchor[0].handleIn
          * - Set anchor[0].handleIn in STEP 3 using interpolated apex → matches emergingAnchor.handleOut apex
-         * - Both existing and emerging anchors transition from fromOrthogonal to toOrthogonal smoothly
+         * - Angle interpolates from midpoint (50%) to toOrthogonal (100%) over the morph
          *
          * Steps:
          * 1. Insert new anchor between anchor[0] and anchor[-1]
@@ -573,7 +574,8 @@
             // STEP 2: Gradually normalize all parameters
             if (result.anchors.length === toSides) {
                 // Interpolate angle towards target orthogonal
-                const currentAngle = fromOrthogonal + (toOrthogonal - fromOrthogonal) * t;
+                // Start at 50% (midpoint) since we've already added the new anchor
+                const currentAngle = fromOrthogonal + (toOrthogonal - fromOrthogonal) * (0.5 + t * 0.5);
 
                 // Move new anchor outward from edge to final position
                 const newAnchor = result.anchors[result.anchors.length - 1];
