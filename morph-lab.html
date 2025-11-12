@@ -475,17 +475,84 @@
             }
         }
 
+        /**
+         * Calculate orthogonal angle for n-sided polygon
+         * This is the "perfect symmetry" angle where all edges are equal
+         */
+        function calculateOrthogonalAngle(sides) {
+            return ((sides - 2) * 180) / sides;
+        }
+
+        /**
+         * Morph algorithm: Insert new anchor and normalize to orthogonality
+         *
+         * Steps:
+         * 1. Insert new anchor between anchor[0] and anchor[-1]
+         * 2. Gradually normalize all parameters to maintain orthogonality
+         */
         function lerpShapes(from, to, t) {
-            // Simple lerp for now - will be replaced with proper morph
+            const fromSides = from.anchors.length;
+            const toSides = fromSides + 1;
+
+            // Calculate orthogonal angles
+            const fromOrthogonal = calculateOrthogonalAngle(fromSides);
+            const toOrthogonal = calculateOrthogonalAngle(toSides);
+
+            // Create result shape starting from 'from'
             const result = from.clone();
 
-            // If anchor counts differ, we need special handling
-            if (from.anchors.length < to.anchors.length) {
-                // Insert new anchor point gradually
-                const lastIdx = from.anchors.length - 1;
-                const insertionPoint = params.insertionPosition;
+            // STEP 1: Insert new anchor between anchor[0] and anchor[-1]
+            if (t > 0 && result.anchors.length === fromSides) {
+                const lastAnchor = result.anchors[fromSides - 1];
+                const firstAnchor = result.anchors[0];
 
-                // TODO: Insert anchor and morph smoothly
+                // Calculate insertion position along the edge
+                const insertT = params.insertionPosition;
+                const newX = lastAnchor.pos.x + (firstAnchor.pos.x - lastAnchor.pos.x) * insertT;
+                const newY = lastAnchor.pos.y + (firstAnchor.pos.y - lastAnchor.pos.y) * insertT;
+
+                // Create new anchor at insertion point
+                const newAnchor = new AnchorPoint(newX, newY);
+
+                // Insert it at the end (between last and first when path closes)
+                result.anchors.push(newAnchor);
+            }
+
+            // STEP 2: Gradually normalize all parameters
+            if (result.anchors.length === toSides) {
+                // Interpolate angle towards target orthogonal
+                const currentAngle = fromOrthogonal + (toOrthogonal - fromOrthogonal) * t;
+
+                // Move new anchor outward from edge to final position
+                const newAnchor = result.anchors[result.anchors.length - 1];
+                const targetAnchor = to.anchors[to.anchors.length - 1];
+
+                // Lerp position towards target
+                newAnchor.pos.x = newAnchor.pos.x + (targetAnchor.pos.x - newAnchor.pos.x) * t * params.emergenceSpeed;
+                newAnchor.pos.y = newAnchor.pos.y + (targetAnchor.pos.y - newAnchor.pos.y) * t * params.emergenceSpeed;
+
+                // Gradually adjust all anchor positions to maintain symmetry
+                // Redistribute anchors evenly around the circle
+                const radius = 250; // Same as initial creation
+                const center = { x: 400, y: 400 };
+                const angleStep = (2 * Math.PI) / toSides;
+
+                for (let i = 0; i < result.anchors.length; i++) {
+                    const targetAngle = i * angleStep;
+                    const targetX = center.x + radius * Math.cos(targetAngle);
+                    const targetY = center.y + radius * Math.sin(targetAngle);
+
+                    const currentAnchor = result.anchors[i];
+
+                    // Smoothly interpolate towards target position
+                    // Use symmetry weight to control how aggressively we enforce symmetry
+                    const normalizationStrength = t * params.symmetryWeight;
+                    currentAnchor.pos.x = currentAnchor.pos.x + (targetX - currentAnchor.pos.x) * normalizationStrength;
+                    currentAnchor.pos.y = currentAnchor.pos.y + (targetY - currentAnchor.pos.y) * normalizationStrength;
+                }
+
+                // Update all handles to maintain orthogonality
+                result.applyParams(params.flow, currentAngle);
             }
 
             return result;
