@@ -486,6 +486,12 @@
         /**
          * Morph algorithm: Insert new anchor and normalize to orthogonality
          *
+         * Value Change Log:
+         * - initialRatio: 0.2 → maintains smooth curve continuity at insertion
+         * - Removed result.applyParams() call → was causing abrupt angle changes to ALL anchors
+         * - Now manually calculating target handles for ONLY emerging anchor using toOrthogonal
+         * - Separate apex calculations for handleIn and handleOut → proper bezier curve formation
+         *
          * Steps:
          * 1. Insert new anchor between anchor[0] and anchor[-1]
          * 2. Gradually normalize all parameters to maintain orthogonality
@@ -638,12 +644,48 @@
                     initialHandleOut.y = normDy * handleLength;
                 }
 
-                // Apply orthogonal parameters to get target handles
-                result.applyParams(params.flow, currentAngle);
+                // Calculate target handles for emerging anchor using toOrthogonal angle
+                // (Do NOT call applyParams - that would change ALL anchors)
+                const prevAnchor = result.anchors[newAnchorIdx - 1];
+                const nextAnchor = result.anchors[0]; // wraps around to first anchor
 
-                // Get target orthogonal handles
-                const targetHandleIn = { ...emergingAnchor.handleIn };
-                const targetHandleOut = { ...emergingAnchor.handleOut };
+                const apexAngle = (toOrthogonal * Math.PI) / 180;
+
+                // Calculate handleOut apex (between emergingAnchor and nextAnchor)
+                const dx_out = nextAnchor.pos.x - emergingAnchor.pos.x;
+                const dy_out = nextAnchor.pos.y - emergingAnchor.pos.y;
+                const baseLength_out = Math.sqrt(dx_out * dx_out + dy_out * dy_out);
+                const perpX_out = dy_out;
+                const perpY_out = -dx_out;
+                const perpLength_out = Math.sqrt(perpX_out * perpX_out + perpY_out * perpY_out);
+                const height_out = (baseLength_out / 2) / Math.tan(apexAngle / 2);
+                const midX_out = (emergingAnchor.pos.x + nextAnchor.pos.x) / 2;
+                const midY_out = (emergingAnchor.pos.y + nextAnchor.pos.y) / 2;
+                const apexX_out = midX_out + (perpX_out / perpLength_out) * height_out;
+                const apexY_out = midY_out + (perpY_out / perpLength_out) * height_out;
+
+                // Calculate handleIn apex (between prevAnchor and emergingAnchor)
+                const dx_in = emergingAnchor.pos.x - prevAnchor.pos.x;
+                const dy_in = emergingAnchor.pos.y - prevAnchor.pos.y;
+                const baseLength_in = Math.sqrt(dx_in * dx_in + dy_in * dy_in);
+                const perpX_in = dy_in;
+                const perpY_in = -dx_in;
+                const perpLength_in = Math.sqrt(perpX_in * perpX_in + perpY_in * perpY_in);
+                const height_in = (baseLength_in / 2) / Math.tan(apexAngle / 2);
+                const midX_in = (prevAnchor.pos.x + emergingAnchor.pos.x) / 2;
+                const midY_in = (prevAnchor.pos.y + emergingAnchor.pos.y) / 2;
+                const apexX_in = midX_in + (perpX_in / perpLength_in) * height_in;
+                const apexY_in = midY_in + (perpY_in / perpLength_in) * height_in;
+
+                // Calculate target orthogonal handles
+                const targetHandleOut = {
+                    x: (apexX_out - emergingAnchor.pos.x) * params.flow,
+                    y: (apexY_out - emergingAnchor.pos.y) * params.flow
+                };
+                const targetHandleIn = {
+                    x: (apexX_in - emergingAnchor.pos.x) * params.flow,
+                    y: (apexY_in - emergingAnchor.pos.y) * params.flow
+                };
 
                 // Interpolate from initial tangent-based to final orthogonal
                 emergingAnchor.handleIn.x = initialHandleIn.x + (targetHandleIn.x - initialHandleIn.x) * t;
