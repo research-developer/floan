@@ -489,14 +489,16 @@
          * Value Change Log:
          * - initialRatio: 0.2 → maintains smooth curve continuity at insertion
          * - Removed result.applyParams() call → was causing abrupt angle changes to ALL anchors
-         * - Changed from toOrthogonal to currentAngle → gradually interpolates angle instead of immediate jump
-         * - Angle calculation: start at halfway between params.angle and toOrthogonal, then interpolate delta to target
+         * - Halfway interpolation ONLY for edges adjacent to emerging anchor
+         * - Existing edges maintain their current angle (params.angle)
+         * - emergingEdgeAngle = halfwayAngle + (toOrthogonal - halfwayAngle) * t
          * - halfwayAngle = params.angle + (toOrthogonal - params.angle) * 0.5
-         * - currentAngle = halfwayAngle + (toOrthogonal - halfwayAngle) * t
-         * - Added handle recalculation for ALL anchors using currentAngle → fixes asymmetry
+         * - Edge (newAnchorIdx-1)→newAnchorIdx uses emergingEdgeAngle
+         * - Edge newAnchorIdx→0 uses emergingEdgeAngle
+         * - All other edges use params.angle (no interpolation)
          * - Separate apex calculations for handleIn and handleOut → proper bezier curve formation
          * - Skip emergingAnchor in handle loop → prevents double-setting anchor[0].handleIn
-         * - Set anchor[0].handleIn in STEP 3 using interpolated apex → matches emergingAnchor.handleOut apex
+         * - Set anchor[0].handleIn in STEP 3 using emergingEdgeAngle → matches emergingAnchor.handleOut apex
          *
          * Steps:
          * 1. Insert new anchor between anchor[0] and anchor[-1]
@@ -574,11 +576,11 @@
 
             // STEP 2: Gradually normalize all parameters
             if (result.anchors.length === toSides) {
-                // Calculate halfway point between current angle and target, then interpolate from there
-                // Current angle is params.angle (what user set), target is toOrthogonal
+                // Calculate halfway point for edges adjacent to emerging anchor ONLY
+                // Other edges maintain their current angle (params.angle)
                 const halfwayAngle = params.angle + (toOrthogonal - params.angle) * 0.5;
                 const angleDelta = toOrthogonal - halfwayAngle;
-                const currentAngle = halfwayAngle + angleDelta * t;
+                const emergingEdgeAngle = halfwayAngle + angleDelta * t;
 
                 // Move new anchor outward from edge to final position
                 const newAnchor = result.anchors[result.anchors.length - 1];
@@ -611,13 +613,19 @@
                 // Identify the emerging anchor
                 const newAnchorIdx = result.anchors.length - 1;
 
-                // Recalculate handles for ALL anchors using interpolated currentAngle
-                // (This maintains symmetry as positions change)
+                // Recalculate handles for anchors
+                // ONLY edges adjacent to emerging anchor use halfway interpolation
+                // All other edges maintain their current angle (params.angle)
                 for (let i = 0; i < result.anchors.length; i++) {
                     const anchor = result.anchors[i];
                     const nextAnchor = result.anchors[(i + 1) % result.anchors.length];
 
-                    // Calculate handles using interpolated currentAngle
+                    // Determine which angle to use for this edge
+                    // Edge (newAnchorIdx-1) → newAnchorIdx uses halfway interpolation
+                    // All other edges use params.angle
+                    const edgeAngle = (i === newAnchorIdx - 1) ? emergingEdgeAngle : params.angle;
+
+                    // Calculate handles using the appropriate angle
                     const dx = nextAnchor.pos.x - anchor.pos.x;
                     const dy = nextAnchor.pos.y - anchor.pos.y;
                     const baseLength = Math.sqrt(dx * dx + dy * dy);
@@ -626,7 +634,7 @@
                     const perpY = -dx;
                     const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
 
-                    const apexAngle = (currentAngle * Math.PI) / 180;
+                    const apexAngle = (edgeAngle * Math.PI) / 180;
                     const height = (baseLength / 2) / Math.tan(apexAngle / 2);
                     const midX = (anchor.pos.x + nextAnchor.pos.x) / 2;
                     const midY = (anchor.pos.y + nextAnchor.pos.y) / 2;
@@ -690,12 +698,12 @@
                     initialHandleOut.y = normDy * handleLength;
                 }
 
-                // Calculate target handles for emerging anchor using interpolated currentAngle
+                // Calculate target handles for emerging anchor using emergingEdgeAngle
                 // (Do NOT call applyParams - that would change ALL anchors)
                 const prevAnchor = result.anchors[newAnchorIdx - 1];
                 const nextAnchor = result.anchors[0]; // wraps around to first anchor
 
-                const apexAngle = (currentAngle * Math.PI) / 180;
+                const apexAngle = (emergingEdgeAngle * Math.PI) / 180;
 
                 // Calculate handleOut apex (between emergingAnchor and nextAnchor)
                 const dx_out = nextAnchor.pos.x - emergingAnchor.pos.x;
