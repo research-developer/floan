@@ -489,8 +489,9 @@
          * Value Change Log:
          * - initialRatio: 0.2 → maintains smooth curve continuity at insertion
          * - Removed result.applyParams() call → was causing abrupt angle changes to ALL anchors
-         * - Now manually calculating target handles for ONLY emerging anchor using toOrthogonal
+         * - Added handle recalculation for ALL anchors using toOrthogonal → fixes asymmetry
          * - Separate apex calculations for handleIn and handleOut → proper bezier curve formation
+         * - Skip emerging anchor in handle loop → it gets special easing treatment
          *
          * Steps:
          * 1. Insert new anchor between anchor[0] and anchor[-1]
@@ -599,8 +600,41 @@
                     currentAnchor.pos.y = currentAnchor.pos.y + (targetY - currentAnchor.pos.y) * normalizationStrength;
                 }
 
-                // STEP 3: Ease new anchor's handles from tangent to orthogonal
+                // Identify the emerging anchor
                 const newAnchorIdx = result.anchors.length - 1;
+
+                // Recalculate handles for ALL anchors using toOrthogonal angle
+                // (This maintains symmetry as positions change)
+                for (let i = 0; i < result.anchors.length; i++) {
+                    const anchor = result.anchors[i];
+                    const nextAnchor = result.anchors[(i + 1) % result.anchors.length];
+
+                    // Skip the emerging anchor - we'll handle it separately below
+                    if (i === newAnchorIdx) continue;
+
+                    // Calculate handles using toOrthogonal angle
+                    const dx = nextAnchor.pos.x - anchor.pos.x;
+                    const dy = nextAnchor.pos.y - anchor.pos.y;
+                    const baseLength = Math.sqrt(dx * dx + dy * dy);
+
+                    const perpX = dy;
+                    const perpY = -dx;
+                    const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
+
+                    const apexAngle = (toOrthogonal * Math.PI) / 180;
+                    const height = (baseLength / 2) / Math.tan(apexAngle / 2);
+                    const midX = (anchor.pos.x + nextAnchor.pos.x) / 2;
+                    const midY = (anchor.pos.y + nextAnchor.pos.y) / 2;
+                    const apexX = midX + (perpX / perpLength) * height;
+                    const apexY = midY + (perpY / perpLength) * height;
+
+                    anchor.handleOut.x = (apexX - anchor.pos.x) * params.flow;
+                    anchor.handleOut.y = (apexY - anchor.pos.y) * params.flow;
+                    nextAnchor.handleIn.x = (apexX - nextAnchor.pos.x) * params.flow;
+                    nextAnchor.handleIn.y = (apexY - nextAnchor.pos.y) * params.flow;
+                }
+
+                // STEP 3: Ease new anchor's handles from tangent to orthogonal
                 const emergingAnchor = result.anchors[newAnchorIdx];
 
                 // Calculate what the INITIAL tangent-based handles were
