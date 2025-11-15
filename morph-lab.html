@@ -784,26 +784,34 @@
                 // Identify the emerging anchor
                 const newAnchorIdx = result.anchors.length - 1;
 
-                // Recalculate handles for edges NOT adjacent to emerging anchor
-                // Skip edges adjacent to emerging anchor to prevent abrupt changes
+                // Store initial handle values on first frame (t ≈ 0)
+                // These will be used to interpolate smoothly toward angle-based targets
+                if (!result.anchors[newAnchorIdx - 1]._storedHandleOut) {
+                    result.anchors[newAnchorIdx - 1]._storedHandleOut = {
+                        x: result.anchors[newAnchorIdx - 1].handleOut.x,
+                        y: result.anchors[newAnchorIdx - 1].handleOut.y
+                    };
+                }
+                if (!result.anchors[0]._storedHandleIn) {
+                    result.anchors[0]._storedHandleIn = {
+                        x: result.anchors[0].handleIn.x,
+                        y: result.anchors[0].handleIn.y
+                    };
+                }
+
+                // Recalculate handles for ALL edges
                 for (let i = 0; i < result.anchors.length; i++) {
                     const anchor = result.anchors[i];
                     const nextAnchor = result.anchors[(i + 1) % result.anchors.length];
 
-                    // Skip the two edges adjacent to emerging anchor:
-                    // 1. Edge from anchor[newAnchorIdx-1] to anchor[newAnchorIdx]
-                    // 2. Edge from anchor[newAnchorIdx] to anchor[0]
+                    // Identify edges adjacent to emerging anchor
                     const isEdgeBeforeEmerging = (i === newAnchorIdx - 1);
                     const isEdgeAfterEmerging = (i === newAnchorIdx);
 
-                    if (isEdgeBeforeEmerging || isEdgeAfterEmerging) {
-                        continue; // Skip edges adjacent to emerging anchor
-                    }
-
-                    // All edges use the same interpolated angle
+                    // All edges use currentAngle
                     const edgeAngle = currentAngle;
 
-                    // Calculate handles using the appropriate angle
+                    // Calculate target handles using angle-based formula
                     const dx = nextAnchor.pos.x - anchor.pos.x;
                     const dy = nextAnchor.pos.y - anchor.pos.y;
                     const baseLength = Math.sqrt(dx * dx + dy * dy);
@@ -819,11 +827,32 @@
                     const apexX = midX + (perpX / perpLength) * height;
                     const apexY = midY + (perpY / perpLength) * height;
 
-                    // Set handles for this edge
-                    anchor.handleOut.x = (apexX - anchor.pos.x) * params.flow;
-                    anchor.handleOut.y = (apexY - anchor.pos.y) * params.flow;
-                    nextAnchor.handleIn.x = (apexX - nextAnchor.pos.x) * params.flow;
-                    nextAnchor.handleIn.y = (apexY - nextAnchor.pos.y) * params.flow;
+                    const targetHandleOut = {
+                        x: (apexX - anchor.pos.x) * params.flow,
+                        y: (apexY - anchor.pos.y) * params.flow
+                    };
+                    const targetHandleIn = {
+                        x: (apexX - nextAnchor.pos.x) * params.flow,
+                        y: (apexY - nextAnchor.pos.y) * params.flow
+                    };
+
+                    // For edges adjacent to emerging anchor, interpolate from stored initial values
+                    // For other edges, set directly to target
+                    if (isEdgeBeforeEmerging && anchor._storedHandleOut) {
+                        anchor.handleOut.x = anchor._storedHandleOut.x + (targetHandleOut.x - anchor._storedHandleOut.x) * t;
+                        anchor.handleOut.y = anchor._storedHandleOut.y + (targetHandleOut.y - anchor._storedHandleOut.y) * t;
+                    } else if (!isEdgeAfterEmerging) {
+                        anchor.handleOut.x = targetHandleOut.x;
+                        anchor.handleOut.y = targetHandleOut.y;
+                    }
+
+                    if (isEdgeAfterEmerging && nextAnchor._storedHandleIn) {
+                        nextAnchor.handleIn.x = nextAnchor._storedHandleIn.x + (targetHandleIn.x - nextAnchor._storedHandleIn.x) * t;
+                        nextAnchor.handleIn.y = nextAnchor._storedHandleIn.y + (targetHandleIn.y - nextAnchor._storedHandleIn.y) * t;
+                    } else if (!isEdgeBeforeEmerging) {
+                        nextAnchor.handleIn.x = targetHandleIn.x;
+                        nextAnchor.handleIn.y = targetHandleIn.y;
+                    }
                 }
 
                 // STEP 3: Ease new anchor's handles from tangent to orthogonal
