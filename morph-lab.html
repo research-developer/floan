@@ -753,6 +753,11 @@
                 const halfwayAngle = fromOrthogonal + (toOrthogonal - fromOrthogonal) * 0.5;
                 const emergingEdgeAngle = halfwayAngle + (toOrthogonal - halfwayAngle) * t;
 
+                // Debug logging at key moments
+                if (t < 0.01 || t > 0.99) {
+                    console.log(`t=${t.toFixed(3)}: fromOrth=${fromOrthogonal.toFixed(1)}° toOrth=${toOrthogonal.toFixed(1)}° currentAngle=${currentAngle.toFixed(1)}° emergingAngle=${emergingEdgeAngle.toFixed(1)}°`);
+                }
+
                 // Move new anchor outward from edge to final position
                 const newAnchor = result.anchors[result.anchors.length - 1];
                 const targetAnchor = to.anchors[to.anchors.length - 1];
