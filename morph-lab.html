@@ -529,38 +529,39 @@
             console.log('FINISHED:', snapshots.finished);
 
             // Create visual comparison with handle data
+            // Paths use absolute coords with center at (400,400), so we translate to offset them
             const svg = `
-<svg width="1400" height="500" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1400" height="500" fill="#0a0a0a"/>
+<svg width="1400" height="900" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+    <rect width="1400" height="900" fill="#0a0a0a"/>
 
     <!-- Before -->
-    <g transform="translate(200, 200)">
+    <g transform="translate(-200, 50)">
         <path d="${snapshots.before?.pathData || ''}" fill="rgba(135,206,235,0.3)" stroke="#4682b4" stroke-width="2"/>
-        <text x="0" y="-170" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">BEFORE</text>
-        <text x="0" y="-150" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${snapshots.before?.anchors || 0}</text>
-        <text x="0" y="-135" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${snapshots.before?.symmetry || 0}</text>
-        <text x="0" y="-120" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${snapshots.before?.params.flow || 0}, Angle: ${snapshots.before?.params.angle || 0}°</text>
-        <text x="0" y="-105" fill="#aaa" text-anchor="middle" font-size="9">Angles: ${snapshots.before?.edgeAngles || ''}</text>
+        <text x="400" y="50" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">BEFORE</text>
+        <text x="400" y="70" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${snapshots.before?.anchors || 0}</text>
+        <text x="400" y="85" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${snapshots.before?.symmetry || 0}</text>
+        <text x="400" y="100" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${snapshots.before?.params.flow || 0}, Angle: ${snapshots.before?.params.angle || 0}°</text>
+        <text x="400" y="115" fill="#aaa" text-anchor="middle" font-size="9">Angles: ${snapshots.before?.edgeAngles || ''}</text>
     </g>
 
     <!-- Just After -->
-    <g transform="translate(600, 200)">
+    <g transform="translate(200, 50)">
         <path d="${snapshots.justAfter?.pathData || ''}" fill="rgba(255,165,0,0.3)" stroke="#ff8c00" stroke-width="2"/>
-        <text x="0" y="-170" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">JUST AFTER START</text>
-        <text x="0" y="-150" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${snapshots.justAfter?.anchors || 0}</text>
-        <text x="0" y="-135" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${snapshots.justAfter?.symmetry || 0}</text>
-        <text x="0" y="-120" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${snapshots.justAfter?.params.flow || 0}, Angle: ${snapshots.justAfter?.params.angle || 0}°</text>
-        <text x="0" y="-105" fill="#aaa" text-anchor="middle" font-size="9">Angles: ${snapshots.justAfter?.edgeAngles || ''}</text>
+        <text x="400" y="50" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">JUST AFTER START</text>
+        <text x="400" y="70" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${snapshots.justAfter?.anchors || 0}</text>
+        <text x="400" y="85" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${snapshots.justAfter?.symmetry || 0}</text>
+        <text x="400" y="100" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${snapshots.justAfter?.params.flow || 0}, Angle: ${snapshots.justAfter?.params.angle || 0}°</text>
+        <text x="400" y="115" fill="#aaa" text-anchor="middle" font-size="9">Angles: ${snapshots.justAfter?.edgeAngles || ''}</text>
     </g>
 
     <!-- Finished -->
-    <g transform="translate(1000, 200)">
+    <g transform="translate(600, 50)">
         <path d="${snapshots.finished?.pathData || ''}" fill="rgba(0,255,0,0.3)" stroke="#00ff00" stroke-width="2"/>
-        <text x="0" y="-170" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">FINISHED</text>
-        <text x="0" y="-150" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${snapshots.finished?.anchors || 0}</text>
-        <text x="0" y="-135" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${snapshots.finished?.symmetry || 0}</text>
-        <text x="0" y="-120" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${snapshots.finished?.params.flow || 0}, Angle: ${snapshots.finished?.params.angle || 0}°</text>
-        <text x="0" y="-105" fill="#aaa" text-anchor="middle" font-size="9">Angles: ${snapshots.finished?.edgeAngles || ''}</text>
+        <text x="400" y="50" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">FINISHED</text>
+        <text x="400" y="70" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${snapshots.finished?.anchors || 0}</text>
+        <text x="400" y="85" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${snapshots.finished?.symmetry || 0}</text>
+        <text x="400" y="100" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${snapshots.finished?.params.flow || 0}, Angle: ${snapshots.finished?.params.angle || 0}°</text>
+        <text x="400" y="115" fill="#aaa" text-anchor="middle" font-size="9">Angles: ${snapshots.finished?.edgeAngles || ''}</text>
     </g>
 </svg>`;
 
