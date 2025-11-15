@@ -784,11 +784,21 @@
                 // Identify the emerging anchor
                 const newAnchorIdx = result.anchors.length - 1;
 
-                // Recalculate handles for ALL anchors
-                // All edges use the same angle (currentAngle) for smooth, uniform transition
+                // Recalculate handles for edges NOT adjacent to emerging anchor
+                // Skip edges adjacent to emerging anchor to prevent abrupt changes
                 for (let i = 0; i < result.anchors.length; i++) {
                     const anchor = result.anchors[i];
                     const nextAnchor = result.anchors[(i + 1) % result.anchors.length];
+
+                    // Skip the two edges adjacent to emerging anchor:
+                    // 1. Edge from anchor[newAnchorIdx-1] to anchor[newAnchorIdx]
+                    // 2. Edge from anchor[newAnchorIdx] to anchor[0]
+                    const isEdgeBeforeEmerging = (i === newAnchorIdx - 1);
+                    const isEdgeAfterEmerging = (i === newAnchorIdx);
+
+                    if (isEdgeBeforeEmerging || isEdgeAfterEmerging) {
+                        continue; // Skip edges adjacent to emerging anchor
+                    }
 
                     // All edges use the same interpolated angle
                     const edgeAngle = currentAngle;
@@ -809,19 +819,11 @@
                     const apexX = midX + (perpX / perpLength) * height;
                     const apexY = midY + (perpY / perpLength) * height;
 
-                    // Set handles for all edges except emerging anchor's own handles
-                    // Emerging anchor's handles are set in STEP 3
-                    if (i !== newAnchorIdx) {
-                        // Set handleOut for this anchor
-                        anchor.handleOut.x = (apexX - anchor.pos.x) * params.flow;
-                        anchor.handleOut.y = (apexY - anchor.pos.y) * params.flow;
-                    }
-
-                    // Set handleIn for next anchor (unless it's the emerging anchor)
-                    if ((i + 1) % result.anchors.length !== newAnchorIdx) {
-                        nextAnchor.handleIn.x = (apexX - nextAnchor.pos.x) * params.flow;
-                        nextAnchor.handleIn.y = (apexY - nextAnchor.pos.y) * params.flow;
-                    }
+                    // Set handles for this edge
+                    anchor.handleOut.x = (apexX - anchor.pos.x) * params.flow;
+                    anchor.handleOut.y = (apexY - anchor.pos.y) * params.flow;
+                    nextAnchor.handleIn.x = (apexX - nextAnchor.pos.x) * params.flow;
+                    nextAnchor.handleIn.y = (apexY - nextAnchor.pos.y) * params.flow;
                 }
 
                 // STEP 3: Ease new anchor's handles from tangent to orthogonal
