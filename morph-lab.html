@@ -54,6 +54,22 @@
         <button onclick="resetState()">⟲ Reset</button>
         <button onclick="addFailure()">💀 Add Failure</button>
 
+        <h2>Debug Mode</h2>
+        <button onclick="toggleDebugMode()">🐛 Toggle Debug UI</button>
+        <button onclick="enableAutoDebug()">🎯 Enable Auto-Detect</button>
+        <button onclick="copySVG()">📋 Copy SVG Code</button>
+
+        <div class="param" style="margin-top: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="auto-export-svg" checked style="width: auto;">
+                <span style="font-size: 11px;">Auto-export SVG on morph complete</span>
+            </label>
+        </div>
+
+        <p style="font-size: 10px; color: #888; margin-top: 5px;">
+            Open DevTools Console and type <code>MorphDebug.help()</code>
+        </p>
+
         <div class="metrics" id="metrics">
             <strong>Live Metrics:</strong>
             <span>Progress: <span id="progress-metric">0%</span></span>
@@ -74,7 +90,13 @@
         <canvas id="canvas" width="800" height="800"></canvas>
     </div>
 
+    <!-- Debug mode scripts (optional - load for debugging) -->
+    <script src="debug-mode.js"></script>
+    <script src="golden-snapshots.js"></script>
+    <script src="console-api.js"></script>
+    <script src="debug-ui.js"></script>
 
+    <!-- Main application -->
     <script src="morph-lab.js"></script>
 </body>
 </html>

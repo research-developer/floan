@@ -6,6 +6,16 @@
  * and handle control points. This allows smooth morphing.
  */
 
+// ===== CANVAS CONFIGURATION =====
+
+const CANVAS_CONFIG = {
+    width: 800,
+    height: 800,
+    centerX: 400,
+    centerY: 400,
+    radius: 250
+};
+
 // ===== CORE DATA STRUCTURES =====
 
 /**
@@ -105,7 +115,7 @@ class Shape {
         totalError += edgeLengthVariance;
 
         // 2. Check angular distances from center
-        const center = { x: 400, y: 400 }; // Known center
+        const center = { x: CANVAS_CONFIG.centerX, y: CANVAS_CONFIG.centerY };
         const distances = [];
         for (let i = 0; i < n; i++) {
             const dx = this.anchors[i].pos.x - center.x;
@@ -422,8 +432,8 @@ class MorphAnimation {
         );
 
         // Normalize all anchor positions to maintain symmetry
-        const radius = 250;
-        const center = { x: 400, y: 400 };
+        const radius = CANVAS_CONFIG.radius;
+        const center = { x: CANVAS_CONFIG.centerX, y: CANVAS_CONFIG.centerY };
         const angleStep = (2 * Math.PI) / toSides;
 
         for (let i = 0; i < result.anchors.length; i++) {
@@ -456,29 +466,26 @@ class MorphAnimation {
                 this.params.flow
             );
 
-            // FIX BUG #3: Ensure emerging anchor's handleOut is set
-            if (isEdgeBeforeEmerging && anchor._storedHandleOut) {
-                anchor.handleOut = GeometryUtils.lerp(
-                    anchor._storedHandleOut,
-                    handles.handleOut,
-                    t
-                );
+            // ORBIT-STABILIZER: Adjacent handles remain in their stabilizer subgroup
+            // (they maintain relative configuration while anchor moves in its orbit)
+            // Non-adjacent handles transform under full group action
+            if (isEdgeBeforeEmerging || isEdgeAfterEmerging) {
+                // Stabilizer: keep stored handle values (relative to anchor)
+                // Handles naturally move with anchor but maintain relationship
+                if (isEdgeBeforeEmerging && anchor._storedHandleOut) {
+                    anchor.handleOut.x = anchor._storedHandleOut.x;
+                    anchor.handleOut.y = anchor._storedHandleOut.y;
+                }
+                if (isEdgeAfterEmerging && nextAnchor._storedHandleIn) {
+                    nextAnchor.handleIn.x = nextAnchor._storedHandleIn.x;
+                    nextAnchor.handleIn.y = nextAnchor._storedHandleIn.y;
+                }
             } else if (!isEdgeAfterEmerging) {
-                // Non-adjacent edges and emerging anchor itself: set directly
+                // Full group action: recalculate using angle-based formula
                 anchor.handleOut = handles.handleOut;
-            }
-
-            // FIX BUG #4: Ensure emerging anchor's handleIn is set
-            if (isEdgeAfterEmerging && nextAnchor._storedHandleIn) {
-                nextAnchor.handleIn = GeometryUtils.lerp(
-                    nextAnchor._storedHandleIn,
-                    handles.handleIn,
-                    t
-                );
-            } else if (!isEdgeBeforeEmerging) {
-                // Non-adjacent edges and emerging anchor itself: set directly
                 nextAnchor.handleIn = handles.handleIn;
             }
+            // Note: emerging anchor's handles handled in STEP 3
         }
 
         // STEP 3: Handle emerging anchor specially with tangent->orthogonal easing
@@ -849,8 +856,20 @@ class MorphLab {
         this.morphAnimation = new MorphAnimation();
         this.snapshotDebugger = new SnapshotDebugger(this.params);
 
+        // Initialize debug mode (if debug files are loaded)
+        if (typeof DebugMode !== 'undefined') {
+            this.debugMode = new DebugMode();
+            this.goldenSnapshots = new GoldenSnapshots();
+            this.debugUI = new DebugUI(canvasElement, this.debugMode);
+
+            // Initialize console API
+            if (typeof MorphDebug !== 'undefined' && MorphDebug.init) {
+                MorphDebug.init(this, this.debugMode, this.goldenSnapshots);
+            }
+        }
+
         // Create initial shape
-        this.currentShape = Shape.createPolygon(this.params.sides, 250, 400, 400, 0);
+        this.currentShape = Shape.createPolygon(this.params.sides, CANVAS_CONFIG.radius, CANVAS_CONFIG.centerX, CANVAS_CONFIG.centerY, 0);
         this.currentShape.applyParams(this.params.flow, this.params.angle);
 
         // Setup UI controller
@@ -866,7 +885,7 @@ class MorphLab {
     onParamChange(paramName, value) {
         if (!this.morphAnimation.active) {
             if (paramName === 'sides') {
-                this.currentShape = Shape.createPolygon(value, 250, 400, 400, 0);
+                this.currentShape = Shape.createPolygon(value, CANVAS_CONFIG.radius, CANVAS_CONFIG.centerX, CANVAS_CONFIG.centerY, 0);
                 this.currentShape.applyParams(this.params.flow, this.params.angle);
             } else if (paramName === 'flow' || paramName === 'angle') {
                 this.currentShape.applyParams(this.params.flow, this.params.angle);
@@ -887,7 +906,7 @@ class MorphLab {
         this.snapshotDebugger.snapshots.before = this.snapshotDebugger.capture(this.currentShape, 'BEFORE');
 
         // Create target shape
-        const toShape = Shape.createPolygon(toSides, 250, 400, 400, 0);
+        const toShape = Shape.createPolygon(toSides, CANVAS_CONFIG.radius, CANVAS_CONFIG.centerX, CANVAS_CONFIG.centerY, 0);
         toShape.applyParams(this.params.flow, this.params.angle);
 
         // Start animation
@@ -895,6 +914,11 @@ class MorphLab {
 
         // Reset snapshots
         this.snapshotDebugger.reset();
+
+        // Start debug capture if debug mode is active
+        if (this.debugMode && (this.debugMode.enabled || this.debugMode.autoDetectEnabled)) {
+            this.debugMode.startCapture();
+        }
 
         console.log(`Starting morph: ${fromSides} → ${toSides} sides`);
     }
@@ -904,7 +928,7 @@ class MorphLab {
      */
     resetState() {
         this.morphAnimation.active = false;
-        this.currentShape = Shape.createPolygon(this.params.sides, 250, 400, 400, 0);
+        this.currentShape = Shape.createPolygon(this.params.sides, CANVAS_CONFIG.radius, CANVAS_CONFIG.centerX, CANVAS_CONFIG.centerY, 0);
         this.currentShape.applyParams(this.params.flow, this.params.angle);
     }
 
@@ -928,9 +952,11 @@ class MorphLab {
         // Clear canvas
         this.renderer.clear();
 
-        // Update morph animation
+        // Update morph animation (respect debug pause state)
         if (this.morphAnimation.active) {
-            this.currentShape = this.morphAnimation.update(timestamp);
+            if (!this.debugMode || !this.debugMode.isPaused) {
+                this.currentShape = this.morphAnimation.update(timestamp);
+            }
 
             // Capture snapshots at key moments
             if (!this.snapshotDebugger.snapshots.justAfter &&
@@ -942,6 +968,11 @@ class MorphLab {
                 );
                 console.log('Captured JUST AFTER snapshot at progress:',
                     (this.morphAnimation.progress * 100).toFixed(1) + '%');
+            }
+
+            // Capture debug frame
+            if (this.debugMode && this.debugMode.capturing) {
+                this.debugMode.captureFrame(this.currentShape, this.morphAnimation.progress, this.params);
             }
 
             // Update UI metrics
@@ -961,6 +992,11 @@ class MorphLab {
 
                 this.snapshotDebugger.display();
 
+                // Stop debug capture if active
+                if (this.debugMode && this.debugMode.capturing) {
+                    this.debugMode.stopCapture();
+                }
+
                 this.params.sides++;
                 document.getElementById('sides').value = this.params.sides;
                 document.getElementById('sides-value').textContent = this.params.sides;
@@ -971,6 +1007,16 @@ class MorphLab {
         // Draw current shape
         if (this.currentShape) {
             this.renderer.drawShape(this.currentShape);
+        }
+
+        // Render debug UI overlay
+        if (this.debugUI && this.debugUI.enabled) {
+            const metrics = {
+                anchorCount: this.currentShape.anchors.length,
+                symmetry: this.currentShape.calculateSymmetry(),
+                edgeAngles: [] // Calculate if needed
+            };
+            this.debugUI.render(this.currentShape, metrics, this.params);
         }
 
         // Continue render loop
