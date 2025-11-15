@@ -184,6 +184,22 @@
         <button onclick="resetState()">⟲ Reset</button>
         <button onclick="addFailure()">💀 Add Failure</button>
 
+        <h2>Debug Mode</h2>
+        <button onclick="toggleDebugMode()">🐛 Toggle Debug UI</button>
+        <button onclick="enableAutoDebug()">🎯 Enable Auto-Detect</button>
+        <button onclick="copySVG()">📋 Copy SVG Code</button>
+
+        <div class="param" style="margin-top: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="auto-export-svg" checked style="width: auto;">
+                <span style="font-size: 11px;">Auto-export SVG on morph complete</span>
+            </label>
+        </div>
+
+        <p style="font-size: 10px; color: #888; margin-top: 5px;">
+            Open DevTools Console and type <code>MorphDebug.help()</code>
+        </p>
+
         <div class="metrics" id="metrics">
             <strong>Live Metrics:</strong>
             <span>Progress: <span id="progress-metric">0%</span></span>
@@ -204,6 +220,13 @@
         <canvas id="canvas" width="800" height="800"></canvas>
     </div>
 
+    <!-- Debug mode scripts (optional - load for debugging) -->
+    <script src="debug-mode.js"></script>
+    <script src="golden-snapshots.js"></script>
+    <script src="console-api.js"></script>
+    <script src="debug-ui.js"></script>
+
+    <!-- Main application -->
     <script>
         /**
          * FloAng Morph Lab - Continuous Vector Animation System
@@ -377,6 +400,11 @@
             progress: 0
         };
 
+        // Debug mode (if debug files are loaded)
+        let debugMode = null;
+        let debugUI = null;
+        let goldenSnapshots = null;
+
         // Parameters (read from UI)
         const params = {
             sides: 3,
@@ -398,6 +426,18 @@
 
             // Setup UI listeners
             setupUIListeners();
+
+            // Initialize debug mode (if debug files are loaded)
+            if (typeof DebugMode !== 'undefined') {
+                debugMode = new DebugMode();
+                goldenSnapshots = new GoldenSnapshots();
+                debugUI = new DebugUI(canvas, debugMode);
+
+                // Initialize console API
+                if (typeof MorphDebug !== 'undefined' && MorphDebug.init) {
+                    MorphDebug.init({ currentShape, params, canvas, ctx, morphState, debugMode, debugUI, goldenSnapshots }, debugMode, goldenSnapshots);
+                }
+            }
 
             // Start render loop
             requestAnimationFrame(render);
@@ -601,6 +641,11 @@
             snapshots.justAfter = null;
             snapshots.finished = null;
 
+            // Start debug capture if debug mode is active
+            if (debugMode && (debugMode.enabled || debugMode.autoDetectEnabled)) {
+                debugMode.startCapture();
+            }
+
             console.log(`Starting morph: ${fromSides} → ${toSides} sides`);
         }
 
@@ -626,6 +671,11 @@
             document.getElementById('symmetry-metric').textContent = currentShape.calculateSymmetry().toFixed(4);
             document.getElementById('anchor-metric').textContent = currentShape.anchors.length;
 
+            // Capture debug frame
+            if (debugMode && debugMode.capturing) {
+                debugMode.captureFrame(currentShape, morphState.progress, params);
+            }
+
             // Check if complete
             if (morphState.progress >= 1) {
                 // CAPTURE SNAPSHOT: FINISHED
@@ -634,6 +684,11 @@
 
                 // Display all snapshots
                 displaySnapshots();
+
+                // Stop debug capture
+                if (debugMode && debugMode.capturing) {
+                    debugMode.stopCapture();
+                }
 
                 morphState.active = false;
                 params.sides++;
@@ -986,14 +1041,21 @@
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Update morph if active
+            // Update morph if active (respect debug pause state)
             if (morphState.active) {
-                updateMorph(timestamp);
+                if (!debugMode || !debugMode.paused) {
+                    updateMorph(timestamp);
+                }
             }
 
             // Draw current shape
             if (currentShape) {
                 drawShape(currentShape);
+            }
+
+            // Render debug UI overlay
+            if (debugUI && debugUI.enabled) {
+                debugUI.render(currentShape, morphState.progress, params);
             }
 
             requestAnimationFrame(render);
@@ -1068,6 +1130,78 @@
                 li.textContent = failure;
                 list.appendChild(li);
             }
+        }
+
+        // ===== DEBUG MODE HELPERS =====
+
+        function toggleDebugMode() {
+            if (debugUI) {
+                if (debugUI.enabled) {
+                    debugUI.disable();
+                    debugMode.disable();
+                } else {
+                    debugUI.enable();
+                    debugMode.enable();
+                }
+            } else {
+                console.warn('Debug mode not loaded. Refresh page to load debug scripts.');
+            }
+        }
+
+        function enableAutoDebug() {
+            if (debugMode) {
+                debugMode.enableAutoDetect();
+                debugMode.startCapture();
+                console.log('✅ Auto-detection enabled. Morph will pause on anomalies.');
+            } else {
+                console.warn('Debug mode not loaded. Refresh page to load debug scripts.');
+            }
+        }
+
+        function copySVG() {
+            if (!currentShape) {
+                console.warn('No shape to export');
+                return;
+            }
+
+            // Generate SVG for current shape
+            const shape = currentShape;
+            const center = { x: 400, y: 400 };
+            const radius = 250;
+
+            // Build path data
+            let pathData = '';
+            for (let i = 0; i < shape.anchors.length; i++) {
+                const anchor = shape.anchors[i];
+                const nextAnchor = shape.anchors[(i + 1) % shape.anchors.length];
+
+                if (i === 0) {
+                    pathData += `M ${anchor.pos.x} ${anchor.pos.y} `;
+                }
+
+                const cp1 = anchor.getHandleOutAbs();
+                const cp2 = nextAnchor.getHandleInAbs();
+                pathData += `C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${nextAnchor.pos.x} ${nextAnchor.pos.y} `;
+            }
+            pathData += 'Z';
+
+            // Create SVG string
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <rect width="800" height="800" fill="#0a0a0a"/>
+  <path d="${pathData}" fill="none" stroke="#6cf" stroke-width="2"/>
+  <circle cx="${center.x}" cy="${center.y}" r="${radius}" fill="none" stroke="#333" stroke-width="1" stroke-dasharray="5,5"/>
+</svg>`;
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(svg).then(() => {
+                console.log('✅ SVG code copied to clipboard');
+                alert('SVG code copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy SVG:', err);
+                // Fallback: show in console
+                console.log('SVG Code:\n', svg);
+                alert('Could not copy to clipboard. Check console for SVG code.');
+            });
         }
 
         // Start the lab!
