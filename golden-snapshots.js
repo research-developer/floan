@@ -5,6 +5,15 @@
  * to detect regressions in future runs.
  */
 
+// Canvas configuration constants
+const CANVAS_CONFIG = {
+    width: 800,
+    height: 800,
+    centerX: 400,
+    centerY: 400,
+    radius: 250
+};
+
 class GoldenSnapshots {
     constructor() {
         this.snapshots = new Map();
@@ -55,7 +64,7 @@ class GoldenSnapshots {
             edgeLengths: []
         };
 
-        const center = { x: 400, y: 400 };
+        const center = { x: CANVAS_CONFIG.centerX, y: CANVAS_CONFIG.centerY };
 
         for (let i = 0; i < shape.anchors.length; i++) {
             const anchor = shape.anchors[i];

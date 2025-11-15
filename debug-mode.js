@@ -8,6 +8,15 @@
  * - Frame-by-frame inspection and comparison
  */
 
+// Canvas configuration constants
+const CANVAS_CONFIG = {
+    width: 800,
+    height: 800,
+    centerX: 400,
+    centerY: 400,
+    radius: 250
+};
+
 class DebugMode {
     constructor() {
         this.enabled = false;
@@ -178,7 +187,7 @@ class DebugMode {
             metrics.handleMagnitudes.push({ in: handleInMag, out: handleOutMag });
 
             // Distance from center
-            const center = { x: 400, y: 400 };
+            const center = { x: CANVAS_CONFIG.centerX, y: CANVAS_CONFIG.centerY };
             const dist = Math.sqrt((anchor.pos.x - center.x) ** 2 + (anchor.pos.y - center.y) ** 2);
             metrics.centerDistances.push(dist);
 

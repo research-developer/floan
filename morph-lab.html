@@ -236,6 +236,16 @@
          * and handle control points. This allows smooth morphing.
          */
 
+        // ===== CANVAS CONFIGURATION =====
+
+        const CANVAS_CONFIG = {
+            width: 800,
+            height: 800,
+            centerX: 400,
+            centerY: 400,
+            radius: 250
+        };
+
         // ===== CORE DATA STRUCTURES =====
 
         /**
@@ -347,7 +357,7 @@
                 totalError += edgeLengthVariance;
 
                 // 2. Check angular distances from center
-                const center = { x: 400, y: 400 }; // Known center
+                const center = { x: CANVAS_CONFIG.centerX, y: CANVAS_CONFIG.centerY };
                 const distances = [];
                 for (let i = 0; i < n; i++) {
                     const dx = this.anchors[i].pos.x - center.x;
@@ -842,8 +852,8 @@
 
                 // Gradually adjust all anchor positions to maintain symmetry
                 // Redistribute anchors evenly around the circle
-                const radius = 250; // Same as initial creation
-                const center = { x: 400, y: 400 };
+                const radius = CANVAS_CONFIG.radius;
+                const center = { x: CANVAS_CONFIG.centerX, y: CANVAS_CONFIG.centerY };
                 const angleStep = (2 * Math.PI) / toSides;
 
                 for (let i = 0; i < result.anchors.length; i++) {
@@ -1043,7 +1053,7 @@
 
             // Update morph if active (respect debug pause state)
             if (morphState.active) {
-                if (!debugMode || !debugMode.paused) {
+                if (!debugMode || !debugMode.isPaused) {
                     updateMorph(timestamp);
                 }
             }
@@ -1055,10 +1065,47 @@
 
             // Render debug UI overlay
             if (debugUI && debugUI.enabled) {
-                debugUI.render(currentShape, morphState.progress, params);
+                const metrics = calculateLiveMetrics(currentShape);
+                debugUI.render(currentShape, metrics, params);
             }
 
             requestAnimationFrame(render);
+        }
+
+        /**
+         * Calculate live metrics for debug UI
+         */
+        function calculateLiveMetrics(shape) {
+            if (!shape || shape.anchors.length < 2) {
+                return {
+                    anchorCount: 0,
+                    symmetry: 0,
+                    edgeAngles: []
+                };
+            }
+
+            const metrics = {
+                anchorCount: shape.anchors.length,
+                symmetry: shape.calculateSymmetry(),
+                edgeAngles: []
+            };
+
+            // Calculate edge angles
+            for (let i = 0; i < shape.anchors.length; i++) {
+                const anchor = shape.anchors[i];
+                const nextAnchor = shape.anchors[(i + 1) % shape.anchors.length];
+
+                const dx = nextAnchor.pos.x - anchor.pos.x;
+                const dy = nextAnchor.pos.y - anchor.pos.y;
+                const baseLength = Math.sqrt(dx * dx + dy * dy);
+
+                const cp1 = anchor.getHandleOutAbs();
+                const height = Math.abs((cp1.y - anchor.pos.y) * dx - (cp1.x - anchor.pos.x) * dy) / baseLength;
+                const angle = Math.atan((2 * height) / (baseLength / 2)) * (180 / Math.PI);
+                metrics.edgeAngles.push(angle);
+            }
+
+            return metrics;
         }
 
         function drawShape(shape) {
@@ -1166,8 +1213,8 @@
 
             // Generate SVG for current shape
             const shape = currentShape;
-            const center = { x: 400, y: 400 };
-            const radius = 250;
+            const center = { x: CANVAS_CONFIG.centerX, y: CANVAS_CONFIG.centerY };
+            const radius = CANVAS_CONFIG.radius;
 
             // Build path data
             let pathData = '';

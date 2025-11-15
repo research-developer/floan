@@ -178,16 +178,13 @@ class ConsoleAPI {
             shape.anchors.push(anchor);
         });
 
-        // Render to canvas
-        this.morphLab.renderer.clear();
-        this.morphLab.renderer.drawShape(shape);
+        // Update currentShape so render loop displays the stepped frame
+        this.morphLab.currentShape = shape;
 
-        // Update metrics display
-        this.morphLab.uiController.updateMetrics(
-            frame.progress,
-            frame.metrics.symmetry,
-            frame.metrics.anchorCount
-        );
+        // Update metrics display in DOM
+        document.getElementById('progress-metric').textContent = (frame.progress * 100).toFixed(1) + '%';
+        document.getElementById('symmetry-metric').textContent = frame.metrics.symmetry.toFixed(4);
+        document.getElementById('anchor-metric').textContent = frame.metrics.anchorCount;
 
         console.log(`📍 Frame ${frame.index} - Progress: ${(frame.progress * 100).toFixed(1)}%`);
     }
