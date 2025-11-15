@@ -6,16 +6,6 @@
  * and handle control points. This allows smooth morphing.
  */
 
-// ===== CANVAS CONFIGURATION =====
-
-const CANVAS_CONFIG = {
-    width: 800,
-    height: 800,
-    centerX: 400,
-    centerY: 400,
-    radius: 250
-};
-
 // ===== CORE DATA STRUCTURES =====
 
 /**
@@ -1046,5 +1036,27 @@ function addFailure() {
     morphLab.addFailure();
 }
 
-// Start the lab!
-init();
+function toggleDebugMode() {
+    if (morphLab.debugUI) {
+        morphLab.debugUI.toggle();
+    } else {
+        console.warn('Debug UI not available');
+    }
+}
+
+function enableAutoDebug() {
+    if (morphLab.debugMode) {
+        morphLab.debugMode.enableAutoDetect();
+        console.log('🎯 Auto-detect enabled');
+    } else {
+        console.warn('Debug mode not available');
+    }
+}
+
+function copySVG() {
+    if (morphLab.snapshotDebugger) {
+        morphLab.snapshotDebugger.display();
+    } else {
+        console.warn('Snapshot debugger not available');
+    }
+}

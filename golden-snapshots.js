@@ -5,15 +5,6 @@
  * to detect regressions in future runs.
  */
 
-// Canvas configuration constants
-const CANVAS_CONFIG = {
-    width: 800,
-    height: 800,
-    centerX: 400,
-    centerY: 400,
-    radius: 250
-};
-
 class GoldenSnapshots {
     constructor() {
         this.snapshots = new Map();

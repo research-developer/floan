@@ -8,15 +8,6 @@
  * - Frame-by-frame inspection and comparison
  */
 
-// Canvas configuration constants
-const CANVAS_CONFIG = {
-    width: 800,
-    height: 800,
-    centerX: 400,
-    centerY: 400,
-    radius: 250
-};
-
 class DebugMode {
     constructor() {
         this.enabled = false;

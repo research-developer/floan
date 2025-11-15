@@ -90,6 +90,9 @@
         <canvas id="canvas" width="800" height="800"></canvas>
     </div>
 
+    <!-- Global configuration -->
+    <script src="config.js"></script>
+
     <!-- Debug mode scripts (optional - load for debugging) -->
     <script src="debug-mode.js"></script>
     <script src="golden-snapshots.js"></script>
@@ -98,5 +101,9 @@
 
     <!-- Main application -->
     <script src="morph-lab.js"></script>
+    <script>
+        // Initialize application
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
 </body>
 </html>
