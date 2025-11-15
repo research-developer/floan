@@ -849,6 +849,18 @@ class MorphLab {
         this.morphAnimation = new MorphAnimation();
         this.snapshotDebugger = new SnapshotDebugger(this.params);
 
+        // Initialize debug mode (if debug files are loaded)
+        if (typeof DebugMode !== 'undefined') {
+            this.debugMode = new DebugMode();
+            this.goldenSnapshots = new GoldenSnapshots();
+            this.debugUI = new DebugUI(canvasElement, this.debugMode);
+
+            // Initialize console API
+            if (typeof MorphDebug !== 'undefined' && MorphDebug.init) {
+                MorphDebug.init(this, this.debugMode, this.goldenSnapshots);
+            }
+        }
+
         // Create initial shape
         this.currentShape = Shape.createPolygon(this.params.sides, 250, 400, 400, 0);
         this.currentShape.applyParams(this.params.flow, this.params.angle);
@@ -896,6 +908,11 @@ class MorphLab {
         // Reset snapshots
         this.snapshotDebugger.reset();
 
+        // Start debug capture if debug mode is active
+        if (this.debugMode && (this.debugMode.enabled || this.debugMode.autoDetectEnabled)) {
+            this.debugMode.startCapture();
+        }
+
         console.log(`Starting morph: ${fromSides} → ${toSides} sides`);
     }
 
@@ -930,41 +947,69 @@ class MorphLab {
 
         // Update morph animation
         if (this.morphAnimation.active) {
-            this.currentShape = this.morphAnimation.update(timestamp);
+            // Check if paused by debug mode
+            if (this.debugMode && this.debugMode.isPaused) {
+                // Don't update animation, just render current frame
+                // User can step through with MorphDebug.step()
+            } else {
+                this.currentShape = this.morphAnimation.update(timestamp);
 
-            // Capture snapshots at key moments
-            if (!this.snapshotDebugger.snapshots.justAfter &&
-                this.morphAnimation.progress > 0.01 &&
-                this.morphAnimation.progress < 0.03) {
-                this.snapshotDebugger.snapshots.justAfter = this.snapshotDebugger.capture(
-                    this.currentShape,
-                    'JUST AFTER'
+                // Capture debug frame if debug mode is active
+                if (this.debugMode && this.debugMode.isCapturing) {
+                    const metrics = {
+                        progress: this.morphAnimation.progress,
+                        symmetry: this.currentShape.calculateSymmetry(),
+                        anchorCount: this.currentShape.anchors.length,
+                        edgeAngles: this._calculateEdgeAngles(this.currentShape)
+                    };
+
+                    this.debugMode.captureFrame(
+                        this.currentShape,
+                        this.params,
+                        this.morphAnimation.progress,
+                        timestamp
+                    );
+                }
+
+                // Capture snapshots at key moments
+                if (!this.snapshotDebugger.snapshots.justAfter &&
+                    this.morphAnimation.progress > 0.01 &&
+                    this.morphAnimation.progress < 0.03) {
+                    this.snapshotDebugger.snapshots.justAfter = this.snapshotDebugger.capture(
+                        this.currentShape,
+                        'JUST AFTER'
+                    );
+                    console.log('Captured JUST AFTER snapshot at progress:',
+                        (this.morphAnimation.progress * 100).toFixed(1) + '%');
+                }
+
+                // Update UI metrics
+                this.uiController.updateMetrics(
+                    this.morphAnimation.progress,
+                    this.currentShape.calculateSymmetry(),
+                    this.currentShape.anchors.length
                 );
-                console.log('Captured JUST AFTER snapshot at progress:',
-                    (this.morphAnimation.progress * 100).toFixed(1) + '%');
-            }
 
-            // Update UI metrics
-            this.uiController.updateMetrics(
-                this.morphAnimation.progress,
-                this.currentShape.calculateSymmetry(),
-                this.currentShape.anchors.length
-            );
+                // Check if complete
+                if (this.morphAnimation.isComplete()) {
+                    this.snapshotDebugger.snapshots.finished = this.snapshotDebugger.capture(
+                        this.currentShape,
+                        'FINISHED'
+                    );
+                    console.log('Captured FINISHED snapshot');
 
-            // Check if complete
-            if (this.morphAnimation.isComplete()) {
-                this.snapshotDebugger.snapshots.finished = this.snapshotDebugger.capture(
-                    this.currentShape,
-                    'FINISHED'
-                );
-                console.log('Captured FINISHED snapshot');
+                    this.snapshotDebugger.display();
 
-                this.snapshotDebugger.display();
+                    // Stop debug capture
+                    if (this.debugMode && this.debugMode.isCapturing) {
+                        this.debugMode.stopCapture();
+                    }
 
-                this.params.sides++;
-                document.getElementById('sides').value = this.params.sides;
-                document.getElementById('sides-value').textContent = this.params.sides;
-                console.log('Morph complete');
+                    this.params.sides++;
+                    document.getElementById('sides').value = this.params.sides;
+                    document.getElementById('sides-value').textContent = this.params.sides;
+                    console.log('Morph complete');
+                }
             }
         }
 
@@ -973,8 +1018,41 @@ class MorphLab {
             this.renderer.drawShape(this.currentShape);
         }
 
+        // Render debug UI overlay
+        if (this.debugUI && this.debugUI.enabled) {
+            const metrics = {
+                progress: this.morphAnimation.progress || 0,
+                symmetry: this.currentShape ? this.currentShape.calculateSymmetry() : 0,
+                anchorCount: this.currentShape ? this.currentShape.anchors.length : 0,
+                edgeAngles: this.currentShape ? this._calculateEdgeAngles(this.currentShape) : []
+            };
+
+            this.debugUI.render(this.currentShape, metrics, timestamp);
+        }
+
         // Continue render loop
         requestAnimationFrame(this.render.bind(this));
+    }
+
+    /**
+     * Calculate edge angles (helper for debug mode)
+     */
+    _calculateEdgeAngles(shape) {
+        const angles = [];
+        for (let i = 0; i < shape.anchors.length; i++) {
+            const anchor = shape.anchors[i];
+            const nextAnchor = shape.anchors[(i + 1) % shape.anchors.length];
+
+            const dx = nextAnchor.pos.x - anchor.pos.x;
+            const dy = nextAnchor.pos.y - anchor.pos.y;
+            const baseLength = Math.sqrt(dx * dx + dy * dy);
+
+            const cp1 = anchor.getHandleOutAbs();
+            const height = Math.abs((cp1.y - anchor.pos.y) * dx - (cp1.x - anchor.pos.x) * dy) / baseLength;
+            const angle = Math.atan((2 * height) / (baseLength / 2)) * (180 / Math.PI);
+            angles.push(angle);
+        }
+        return angles;
     }
 }
 

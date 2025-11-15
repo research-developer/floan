@@ -54,6 +54,13 @@
         <button onclick="resetState()">⟲ Reset</button>
         <button onclick="addFailure()">💀 Add Failure</button>
 
+        <h2>Debug Mode</h2>
+        <button onclick="toggleDebugMode()">🐛 Toggle Debug UI</button>
+        <button onclick="enableAutoDebug()">🎯 Enable Auto-Detect</button>
+        <p style="font-size: 10px; color: #888; margin-top: 5px;">
+            Open DevTools Console and type <code>MorphDebug.help()</code>
+        </p>
+
         <div class="metrics" id="metrics">
             <strong>Live Metrics:</strong>
             <span>Progress: <span id="progress-metric">0%</span></span>
@@ -75,6 +82,40 @@
     </div>
 
 
+    <!-- Debug mode scripts (optional - load for debugging) -->
+    <script src="debug-mode.js"></script>
+    <script src="golden-snapshots.js"></script>
+    <script src="console-api.js"></script>
+    <script src="debug-ui.js"></script>
+
+    <!-- Main application -->
     <script src="morph-lab.js"></script>
+
+    <!-- Global debug functions -->
+    <script>
+        function toggleDebugMode() {
+            if (morphLab.debugUI) {
+                if (morphLab.debugUI.enabled) {
+                    morphLab.debugUI.disable();
+                    morphLab.debugMode.disable();
+                } else {
+                    morphLab.debugUI.enable();
+                    morphLab.debugMode.enable();
+                }
+            } else {
+                console.warn('Debug mode not loaded. Refresh page to load debug scripts.');
+            }
+        }
+
+        function enableAutoDebug() {
+            if (morphLab.debugMode) {
+                morphLab.debugMode.enableAutoDetect();
+                morphLab.debugUI.enable();
+                console.log('🎯 Auto-detect enabled. Start a morph to begin capture.');
+            } else {
+                console.warn('Debug mode not loaded. Refresh page to load debug scripts.');
+            }
+        }
+    </script>
 </body>
 </html>
