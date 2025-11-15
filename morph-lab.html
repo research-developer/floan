@@ -740,6 +740,30 @@
 
                 // Insert it at the end (between last and first when path closes)
                 result.anchors.push(newAnchor);
+
+                // IMMEDIATELY store the handle values on the ORIGINAL 'from' shape anchors
+                // This persists across frames since 'result' is cloned from 'from' each frame
+                const newAnchorIdx = result.anchors.length - 1;
+                if (!from.anchors[newAnchorIdx - 1]._storedHandleOut) {
+                    from.anchors[newAnchorIdx - 1]._storedHandleOut = {
+                        x: result.anchors[newAnchorIdx - 1].handleOut.x,
+                        y: result.anchors[newAnchorIdx - 1].handleOut.y
+                    };
+                    console.log(`[INIT] Stored anchor[${newAnchorIdx - 1}].handleOut:`,
+                        from.anchors[newAnchorIdx - 1]._storedHandleOut);
+                }
+                if (!from.anchors[0]._storedHandleIn) {
+                    from.anchors[0]._storedHandleIn = {
+                        x: result.anchors[0].handleIn.x,
+                        y: result.anchors[0].handleIn.y
+                    };
+                    console.log(`[INIT] Stored anchor[0].handleIn:`,
+                        from.anchors[0]._storedHandleIn);
+                }
+
+                // Copy stored values to result anchors for this frame
+                result.anchors[newAnchorIdx - 1]._storedHandleOut = from.anchors[newAnchorIdx - 1]._storedHandleOut;
+                result.anchors[0]._storedHandleIn = from.anchors[0]._storedHandleIn;
             }
 
             // STEP 2: Gradually normalize all parameters
@@ -784,21 +808,6 @@
                 // Identify the emerging anchor
                 const newAnchorIdx = result.anchors.length - 1;
 
-                // Store initial handle values on first frame (t ≈ 0)
-                // These will be used to interpolate smoothly toward angle-based targets
-                if (!result.anchors[newAnchorIdx - 1]._storedHandleOut) {
-                    result.anchors[newAnchorIdx - 1]._storedHandleOut = {
-                        x: result.anchors[newAnchorIdx - 1].handleOut.x,
-                        y: result.anchors[newAnchorIdx - 1].handleOut.y
-                    };
-                }
-                if (!result.anchors[0]._storedHandleIn) {
-                    result.anchors[0]._storedHandleIn = {
-                        x: result.anchors[0].handleIn.x,
-                        y: result.anchors[0].handleIn.y
-                    };
-                }
-
                 // Recalculate handles for ALL edges
                 for (let i = 0; i < result.anchors.length; i++) {
                     const anchor = result.anchors[i];
@@ -837,22 +846,36 @@
                     };
 
                     // For edges adjacent to emerging anchor, interpolate from stored initial values
-                    // For other edges, set directly to target
+                    // For other edges (including emerging anchor itself), set directly to target
                     if (isEdgeBeforeEmerging && anchor._storedHandleOut) {
+                        // Edge before emerging: interpolate anchor[newAnchorIdx-1].handleOut
                         anchor.handleOut.x = anchor._storedHandleOut.x + (targetHandleOut.x - anchor._storedHandleOut.x) * t;
                         anchor.handleOut.y = anchor._storedHandleOut.y + (targetHandleOut.y - anchor._storedHandleOut.y) * t;
+
+                        if (t < 0.02 || t > 0.98) {
+                            console.log(`[t=${t.toFixed(3)}] anchor[${i}].handleOut: stored=(${anchor._storedHandleOut.x.toFixed(2)},${anchor._storedHandleOut.y.toFixed(2)}) target=(${targetHandleOut.x.toFixed(2)},${targetHandleOut.y.toFixed(2)}) result=(${anchor.handleOut.x.toFixed(2)},${anchor.handleOut.y.toFixed(2)})`);
+                        }
                     } else if (!isEdgeAfterEmerging) {
+                        // Non-adjacent edges: set directly
                         anchor.handleOut.x = targetHandleOut.x;
                         anchor.handleOut.y = targetHandleOut.y;
                     }
+                    // Note: emerging anchor's handleOut is handled in STEP 3
 
                     if (isEdgeAfterEmerging && nextAnchor._storedHandleIn) {
+                        // Edge after emerging: interpolate anchor[0].handleIn
                         nextAnchor.handleIn.x = nextAnchor._storedHandleIn.x + (targetHandleIn.x - nextAnchor._storedHandleIn.x) * t;
                         nextAnchor.handleIn.y = nextAnchor._storedHandleIn.y + (targetHandleIn.y - nextAnchor._storedHandleIn.y) * t;
+
+                        if (t < 0.02 || t > 0.98) {
+                            console.log(`[t=${t.toFixed(3)}] anchor[${(i+1) % result.anchors.length}].handleIn: stored=(${nextAnchor._storedHandleIn.x.toFixed(2)},${nextAnchor._storedHandleIn.y.toFixed(2)}) target=(${targetHandleIn.x.toFixed(2)},${targetHandleIn.y.toFixed(2)}) result=(${nextAnchor.handleIn.x.toFixed(2)},${nextAnchor.handleIn.y.toFixed(2)})`);
+                        }
                     } else if (!isEdgeBeforeEmerging) {
+                        // Non-adjacent edges: set directly
                         nextAnchor.handleIn.x = targetHandleIn.x;
                         nextAnchor.handleIn.y = targetHandleIn.y;
                     }
+                    // Note: emerging anchor's handleIn is handled in STEP 3
                 }
 
                 // STEP 3: Ease new anchor's handles from tangent to orthogonal
