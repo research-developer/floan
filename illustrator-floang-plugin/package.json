@@ -1,0 +1,26 @@
+{
+  "name": "floang-illustrator-plugin",
+  "version": "1.0.0",
+  "description": "Adobe Illustrator UXP plugin for generating geometric patterns using the FloAng algorithm",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "illustrator",
+    "uxp",
+    "plugin",
+    "geometric",
+    "sacred-geometry",
+    "pattern-generator",
+    "bezier",
+    "mandala"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "illustrator": ">=26.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

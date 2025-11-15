@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FloAng</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app" class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">FloAng</h1>
+            <p class="subtitle">Geometric Pattern Generator</p>
+        </header>
+
+        <!-- Preset Buttons -->
+        <section class="presets-section">
+            <h2 class="section-title">Presets</h2>
+            <div class="presets-grid">
+                <button class="preset-btn" data-preset="triquetra">
+                    <span class="preset-name">Triquetra</span>
+                    <span class="preset-params">n=3</span>
+                </button>
+                <button class="preset-btn" data-preset="flower">
+                    <span class="preset-name">Flower</span>
+                    <span class="preset-params">n=6</span>
+                </button>
+                <button class="preset-btn" data-preset="star">
+                    <span class="preset-name">Star</span>
+                    <span class="preset-params">n=5</span>
+                </button>
+                <button class="preset-btn" data-preset="smooth">
+                    <span class="preset-name">Smooth</span>
+                    <span class="preset-params">n=6</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Parameters Section -->
+        <section class="parameters-section">
+            <h2 class="section-title">Parameters</h2>
+
+            <!-- Sides Control -->
+            <div class="control-group">
+                <label class="control-label">
+                    <span class="label-text">Sides</span>
+                    <span class="label-value" id="sides-value">3</span>
+                </label>
+                <input
+                    type="range"
+                    id="sides-slider"
+                    class="slider"
+                    min="1"
+                    max="12"
+                    step="1"
+                    value="3"
+                >
+                <div class="slider-markers">
+                    <span>1</span>
+                    <span>6</span>
+                    <span>12</span>
+                </div>
+            </div>
+
+            <!-- Flow Control -->
+            <div class="control-group">
+                <label class="control-label">
+                    <span class="label-text">Flow</span>
+                    <span class="label-value" id="flow-value">-0.66</span>
+                </label>
+                <input
+                    type="range"
+                    id="flow-slider"
+                    class="slider"
+                    min="-3"
+                    max="1"
+                    step="0.01"
+                    value="-0.66"
+                >
+                <div class="slider-markers">
+                    <span>-3</span>
+                    <span>-1</span>
+                    <span>1</span>
+                </div>
+            </div>
+
+            <!-- Angle Control -->
+            <div class="control-group">
+                <label class="control-label">
+                    <span class="label-text">Angle</span>
+                    <span class="label-value" id="angle-value">60°</span>
+                </label>
+                <input
+                    type="range"
+                    id="angle-slider"
+                    class="slider"
+                    min="10"
+                    max="110"
+                    step="1"
+                    value="60"
+                >
+                <div class="slider-markers">
+                    <span id="angle-min">10°</span>
+                    <span id="angle-ortho" class="orthogonal-marker">60°</span>
+                    <span id="angle-max">110°</span>
+                </div>
+            </div>
+
+            <!-- Rotation Control -->
+            <div class="control-group">
+                <label class="control-label">
+                    <span class="label-text">Rotation</span>
+                    <span class="label-value" id="rotation-value">-30°</span>
+                </label>
+                <input
+                    type="range"
+                    id="rotation-slider"
+                    class="slider"
+                    min="-360"
+                    max="360"
+                    step="1"
+                    value="-30"
+                >
+                <div class="slider-markers">
+                    <span>-360°</span>
+                    <span>0°</span>
+                    <span>360°</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Generate Button -->
+        <section class="action-section">
+            <button id="generate-btn" class="generate-btn">
+                <span class="btn-text">Generate Pattern</span>
+                <span class="btn-icon">✨</span>
+            </button>
+            <div id="status-message" class="status-message"></div>
+        </section>
+
+        <!-- Debug Menu (Hidden by default, toggle with Cmd+Shift+D) -->
+        <section id="debug-menu" class="debug-menu" style="display: none;">
+            <h3 class="debug-title">Debug Menu</h3>
+            <div class="debug-info">
+                <p><strong>Current Parameters:</strong></p>
+                <pre id="debug-params">Loading...</pre>
+            </div>
+            <button id="debug-close" class="debug-close-btn">Close</button>
+        </section>
+    </div>
+
+    <!-- Load Scripts -->
+    <script type="module" src="../main.js"></script>
+    <script type="module" src="panel.js"></script>
+</body>
+</html>

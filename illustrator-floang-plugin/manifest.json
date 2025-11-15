@@ -1,0 +1,73 @@
+{
+  "id": "com.floang.illustrator",
+  "name": "FloAng",
+  "version": "1.0.0",
+  "host": [
+    {
+      "app": "AI",
+      "minVersion": "26.0"
+    }
+  ],
+  "manifestVersion": 5,
+  "requiredPermissions": [
+    {
+      "name": "launchProcess",
+      "reasons": ["Required for debugging and logging"]
+    },
+    {
+      "name": "network",
+      "domains": [],
+      "reasons": ["For future preset sharing features"]
+    }
+  ],
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "floangPanel",
+      "label": {
+        "default": "FloAng"
+      },
+      "minimumSize": {
+        "width": 320,
+        "height": 480
+      },
+      "maximumSize": {
+        "width": 600,
+        "height": 1200
+      },
+      "preferredDockedSize": {
+        "width": 360,
+        "height": 640
+      },
+      "preferredFloatingSize": {
+        "width": 360,
+        "height": 640
+      },
+      "icons": [
+        {
+          "width": 24,
+          "height": 24,
+          "path": "icons/icon-24.png",
+          "scale": [1, 2],
+          "theme": ["lightest", "light", "medium", "dark", "darkest", "all"]
+        }
+      ]
+    }
+  ],
+  "icons": [
+    {
+      "width": 24,
+      "height": 24,
+      "path": "icons/icon-24.png",
+      "scale": [1, 2],
+      "theme": ["lightest", "light", "medium", "dark", "darkest", "all"]
+    },
+    {
+      "width": 48,
+      "height": 48,
+      "path": "icons/icon-48.png",
+      "scale": [1, 2],
+      "theme": ["lightest", "light", "medium", "dark", "darkest", "all"]
+    }
+  ]
+}
