@@ -757,6 +757,283 @@
             }
         }
 
+        /**
+         * Renderer - Handles all canvas drawing operations
+         */
+        class Renderer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+            }
+
+            /**
+             * Clear the canvas
+             */
+            clear() {
+                this.ctx.fillStyle = '#0a0a0a';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            /**
+             * Draw a shape with its anchors and handles
+             */
+            drawShape(shape, options = {}) {
+                if (!shape || shape.anchors.length < 2) return;
+
+                const {
+                    strokeColor = '#4682b4',
+                    fillColor = 'rgba(135, 206, 235, 0.3)',
+                    lineWidth = 2,
+                    showAnchors = true,
+                    showHandles = true
+                } = options;
+
+                this.ctx.strokeStyle = strokeColor;
+                this.ctx.lineWidth = lineWidth;
+                this.ctx.fillStyle = fillColor;
+
+                // Draw the bezier path
+                this.ctx.beginPath();
+                const firstAnchor = shape.anchors[0];
+                this.ctx.moveTo(firstAnchor.pos.x, firstAnchor.pos.y);
+
+                for (let i = 0; i < shape.anchors.length; i++) {
+                    const anchor = shape.anchors[i];
+                    const nextAnchor = shape.anchors[(i + 1) % shape.anchors.length];
+
+                    const cp1 = anchor.getHandleOutAbs();
+                    const cp2 = nextAnchor.getHandleInAbs();
+
+                    this.ctx.bezierCurveTo(
+                        cp1.x, cp1.y,
+                        cp2.x, cp2.y,
+                        nextAnchor.pos.x, nextAnchor.pos.y
+                    );
+                }
+
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+
+                if (showAnchors) {
+                    this._drawAnchors(shape.anchors, showHandles);
+                }
+            }
+
+            /**
+             * Draw anchor points and their handles
+             */
+            _drawAnchors(anchors, showHandles) {
+                anchors.forEach(anchor => {
+                    // Draw anchor point
+                    this.ctx.fillStyle = '#ff00ff';
+                    this.ctx.beginPath();
+                    this.ctx.arc(anchor.pos.x, anchor.pos.y, 4, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    if (showHandles) {
+                        // Draw handle out
+                        this.ctx.strokeStyle = '#f66';
+                        this.ctx.lineWidth = 1;
+                        const outAbs = anchor.getHandleOutAbs();
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(anchor.pos.x, anchor.pos.y);
+                        this.ctx.lineTo(outAbs.x, outAbs.y);
+                        this.ctx.stroke();
+
+                        this.ctx.fillStyle = '#f66';
+                        this.ctx.beginPath();
+                        this.ctx.arc(outAbs.x, outAbs.y, 2, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                });
+            }
+        }
+
+        /**
+         * UIController - Manages UI interactions and parameter updates
+         */
+        class UIController {
+            constructor(params, onParamChange) {
+                this.params = params;
+                this.onParamChange = onParamChange;
+                this.setupListeners();
+            }
+
+            setupListeners() {
+                // Sides slider
+                document.getElementById('sides').addEventListener('input', (e) => {
+                    this.params.sides = parseInt(e.target.value);
+                    document.getElementById('sides-value').textContent = this.params.sides;
+                    this.onParamChange('sides', this.params.sides);
+                });
+
+                // Flow slider
+                document.getElementById('flow').addEventListener('input', (e) => {
+                    this.params.flow = parseFloat(e.target.value);
+                    document.getElementById('flow-value').textContent = this.params.flow.toFixed(2);
+                    this.onParamChange('flow', this.params.flow);
+                });
+
+                // Angle slider
+                document.getElementById('angle').addEventListener('input', (e) => {
+                    this.params.angle = parseFloat(e.target.value);
+                    document.getElementById('angle-value').textContent = this.params.angle + '°';
+                    this.onParamChange('angle', this.params.angle);
+                });
+
+                // Duration slider
+                document.getElementById('duration').addEventListener('input', (e) => {
+                    this.params.duration = parseInt(e.target.value);
+                    document.getElementById('duration-value').textContent = this.params.duration;
+                });
+
+                // Easing slider
+                document.getElementById('easing').addEventListener('input', (e) => {
+                    this.params.easingPower = parseFloat(e.target.value);
+                    document.getElementById('easing-value').textContent = this.params.easingPower.toFixed(1);
+                });
+
+                // Insertion position slider
+                document.getElementById('insertion').addEventListener('input', (e) => {
+                    this.params.insertionPosition = parseFloat(e.target.value);
+                    document.getElementById('insertion-value').textContent = this.params.insertionPosition.toFixed(2);
+                });
+
+                // Emergence speed slider
+                document.getElementById('emergence').addEventListener('input', (e) => {
+                    this.params.emergenceSpeed = parseFloat(e.target.value);
+                    document.getElementById('emergence-value').textContent = this.params.emergenceSpeed.toFixed(1);
+                });
+
+                // Symmetry weight slider
+                document.getElementById('symmetry-weight').addEventListener('input', (e) => {
+                    this.params.symmetryWeight = parseFloat(e.target.value);
+                    document.getElementById('symmetry-value').textContent = this.params.symmetryWeight.toFixed(1);
+                });
+            }
+
+            updateMetrics(progress, symmetry, anchorCount) {
+                document.getElementById('progress-metric').textContent = (progress * 100).toFixed(1) + '%';
+                document.getElementById('symmetry-metric').textContent = symmetry.toFixed(4);
+                document.getElementById('anchor-metric').textContent = anchorCount;
+            }
+        }
+
+        /**
+         * SnapshotDebugger - Captures and displays shape snapshots for debugging
+         */
+        class SnapshotDebugger {
+            constructor(params) {
+                this.params = params;
+                this.snapshots = {
+                    before: null,
+                    justAfter: null,
+                    finished: null
+                };
+            }
+
+            capture(shape, label) {
+                if (!shape || shape.anchors.length < 2) return null;
+
+                // Create SVG path data
+                let pathData = `M ${shape.anchors[0].pos.x} ${shape.anchors[0].pos.y}`;
+
+                for (let i = 0; i < shape.anchors.length; i++) {
+                    const anchor = shape.anchors[i];
+                    const nextAnchor = shape.anchors[(i + 1) % shape.anchors.length];
+                    const cp1 = anchor.getHandleOutAbs();
+                    const cp2 = nextAnchor.getHandleInAbs();
+
+                    pathData += ` C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${nextAnchor.pos.x} ${nextAnchor.pos.y}`;
+                }
+                pathData += ' Z';
+
+                // Calculate edge angles
+                const edgeAngles = [];
+                for (let i = 0; i < shape.anchors.length; i++) {
+                    const anchor = shape.anchors[i];
+                    const nextAnchor = shape.anchors[(i + 1) % shape.anchors.length];
+                    const dx = nextAnchor.pos.x - anchor.pos.x;
+                    const dy = nextAnchor.pos.y - anchor.pos.y;
+                    const baseLength = Math.sqrt(dx * dx + dy * dy);
+
+                    const cp1 = anchor.getHandleOutAbs();
+                    const height = Math.abs((cp1.y - anchor.pos.y) * dx - (cp1.x - anchor.pos.x) * dy) / baseLength;
+                    const angle = Math.atan((2 * height) / (baseLength / 2)) * (180 / Math.PI);
+                    edgeAngles.push(angle.toFixed(2));
+                }
+
+                return {
+                    label,
+                    pathData,
+                    anchors: shape.anchors.length,
+                    symmetry: shape.calculateSymmetry().toFixed(4),
+                    edgeAngles: edgeAngles.join(', '),
+                    params: {
+                        flow: this.params.flow.toFixed(2),
+                        angle: this.params.angle.toFixed(0)
+                    }
+                };
+            }
+
+            display() {
+                console.log('\n=== SNAPSHOT COMPARISON ===');
+                console.log('BEFORE:', this.snapshots.before);
+                console.log('JUST AFTER:', this.snapshots.justAfter);
+                console.log('FINISHED:', this.snapshots.finished);
+
+                // Create SVG comparison (using template literals for better readability)
+                // Paths use absolute coordinates with center at (400,400), so we translate to offset them
+                const svg = `
+<svg width="1400" height="900" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+    <rect width="1400" height="900" fill="#0a0a0a"/>
+
+    <!-- Before -->
+    <g transform="translate(-200, 50)">
+        <path d="${this.snapshots.before?.pathData || ''}" fill="rgba(135,206,235,0.3)" stroke="#4682b4" stroke-width="2"/>
+        <text x="400" y="50" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">BEFORE</text>
+        <text x="400" y="70" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${this.snapshots.before?.anchors || 0}</text>
+        <text x="400" y="85" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${this.snapshots.before?.symmetry || 0}</text>
+        <text x="400" y="100" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${this.snapshots.before?.params.flow || 0}, Angle: ${this.snapshots.before?.params.angle || 0}°</text>
+    </g>
+
+    <!-- Just After -->
+    <g transform="translate(200, 50)">
+        <path d="${this.snapshots.justAfter?.pathData || ''}" fill="rgba(255,165,0,0.3)" stroke="#ff8c00" stroke-width="2"/>
+        <text x="400" y="50" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">JUST AFTER START</text>
+        <text x="400" y="70" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${this.snapshots.justAfter?.anchors || 0}</text>
+        <text x="400" y="85" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${this.snapshots.justAfter?.symmetry || 0}</text>
+        <text x="400" y="100" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${this.snapshots.justAfter?.params.flow || 0}, Angle: ${this.snapshots.justAfter?.params.angle || 0}°</text>
+    </g>
+
+    <!-- Finished -->
+    <g transform="translate(600, 50)">
+        <path d="${this.snapshots.finished?.pathData || ''}" fill="rgba(0,255,0,0.3)" stroke="#00ff00" stroke-width="2"/>
+        <text x="400" y="50" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">FINISHED</text>
+        <text x="400" y="70" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${this.snapshots.finished?.anchors || 0}</text>
+        <text x="400" y="85" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${this.snapshots.finished?.symmetry || 0}</text>
+        <text x="400" y="100" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${this.snapshots.finished?.params.flow || 0}, Angle: ${this.snapshots.finished?.params.angle || 0}°</text>
+    </g>
+</svg>`;
+
+                console.log('SVG comparison:\n' + svg);
+
+                // Save to file for viewing
+                const blob = new Blob([svg], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'morph-snapshots.svg';
+                a.click();
+            }
+
+            reset() {
+                this.snapshots.justAfter = null;
+                this.snapshots.finished = null;
+            }
+        }
+
         // ===== STATE =====
 
         const canvas = document.getElementById('canvas');
