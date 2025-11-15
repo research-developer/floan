@@ -1034,363 +1034,177 @@
             }
         }
 
-        // ===== STATE =====
+        /**
+         * MorphLab - Main orchestrator class coordinating all components
+         */
+        class MorphLab {
+            constructor(canvasElement) {
+                // Initialize parameters
+                this.params = {
+                    sides: 3,
+                    flow: -0.66,
+                    angle: 60,
+                    duration: 3000,
+                    easingPower: 3,
+                    insertionPosition: 0.5,
+                    emergenceSpeed: 1.0,
+                    symmetryWeight: 1.0
+                };
 
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+                // Initialize components
+                this.renderer = new Renderer(canvasElement);
+                this.morphAnimation = new MorphAnimation();
+                this.snapshotDebugger = new SnapshotDebugger(this.params);
 
-        let currentShape = null;
-        let morphAnimation = new MorphAnimation();
+                // Create initial shape
+                this.currentShape = Shape.createPolygon(this.params.sides, 250, 400, 400, 0);
+                this.currentShape.applyParams(this.params.flow, this.params.angle);
 
-        // Parameters (read from UI)
-        const params = {
-            sides: 3,
-            flow: -0.66,
-            angle: 60,
-            duration: 3000,
-            easingPower: 3,
-            insertionPosition: 0.5,
-            emergenceSpeed: 1.0,
-            symmetryWeight: 1.0
-        };
+                // Setup UI controller
+                this.uiController = new UIController(this.params, this.onParamChange.bind(this));
+
+                // Start render loop
+                requestAnimationFrame(this.render.bind(this));
+            }
+
+            /**
+             * Handle parameter changes from UI
+             */
+            onParamChange(paramName, value) {
+                if (!this.morphAnimation.active) {
+                    if (paramName === 'sides') {
+                        this.currentShape = Shape.createPolygon(value, 250, 400, 400, 0);
+                        this.currentShape.applyParams(this.params.flow, this.params.angle);
+                    } else if (paramName === 'flow' || paramName === 'angle') {
+                        this.currentShape.applyParams(this.params.flow, this.params.angle);
+                    }
+                }
+            }
+
+            /**
+             * Start morph animation
+             */
+            startMorph() {
+                if (this.morphAnimation.active) return;
+
+                const fromSides = this.params.sides;
+                const toSides = fromSides + 1;
+
+                // Capture before snapshot
+                this.snapshotDebugger.snapshots.before = this.snapshotDebugger.capture(this.currentShape, 'BEFORE');
+
+                // Create target shape
+                const toShape = Shape.createPolygon(toSides, 250, 400, 400, 0);
+                toShape.applyParams(this.params.flow, this.params.angle);
+
+                // Start animation
+                this.morphAnimation.start(this.currentShape, toShape, this.params);
+
+                // Reset snapshots
+                this.snapshotDebugger.reset();
+
+                console.log(`Starting morph: ${fromSides} → ${toSides} sides`);
+            }
+
+            /**
+             * Reset to initial state
+             */
+            resetState() {
+                this.morphAnimation.active = false;
+                this.currentShape = Shape.createPolygon(this.params.sides, 250, 400, 400, 0);
+                this.currentShape.applyParams(this.params.flow, this.params.angle);
+            }
+
+            /**
+             * Add failure to hall of shame
+             */
+            addFailure() {
+                const failure = prompt('What didn\'t work?');
+                if (failure) {
+                    const list = document.getElementById('failure-list');
+                    const li = document.createElement('li');
+                    li.textContent = failure;
+                    list.appendChild(li);
+                }
+            }
+
+            /**
+             * Main render loop
+             */
+            render(timestamp) {
+                // Clear canvas
+                this.renderer.clear();
+
+                // Update morph animation
+                if (this.morphAnimation.active) {
+                    this.currentShape = this.morphAnimation.update(timestamp);
+
+                    // Capture snapshots at key moments
+                    if (!this.snapshotDebugger.snapshots.justAfter &&
+                        this.morphAnimation.progress > 0.01 &&
+                        this.morphAnimation.progress < 0.03) {
+                        this.snapshotDebugger.snapshots.justAfter = this.snapshotDebugger.capture(
+                            this.currentShape,
+                            'JUST AFTER'
+                        );
+                        console.log('Captured JUST AFTER snapshot at progress:',
+                            (this.morphAnimation.progress * 100).toFixed(1) + '%');
+                    }
+
+                    // Update UI metrics
+                    this.uiController.updateMetrics(
+                        this.morphAnimation.progress,
+                        this.currentShape.calculateSymmetry(),
+                        this.currentShape.anchors.length
+                    );
+
+                    // Check if complete
+                    if (this.morphAnimation.isComplete()) {
+                        this.snapshotDebugger.snapshots.finished = this.snapshotDebugger.capture(
+                            this.currentShape,
+                            'FINISHED'
+                        );
+                        console.log('Captured FINISHED snapshot');
+
+                        this.snapshotDebugger.display();
+
+                        this.params.sides++;
+                        document.getElementById('sides').value = this.params.sides;
+                        document.getElementById('sides-value').textContent = this.params.sides;
+                        console.log('Morph complete');
+                    }
+                }
+
+                // Draw current shape
+                if (this.currentShape) {
+                    this.renderer.drawShape(this.currentShape);
+                }
+
+                // Continue render loop
+                requestAnimationFrame(this.render.bind(this));
+            }
+        }
 
         // ===== INITIALIZATION =====
 
+        let morphLab = null;
+
         function init() {
-            // Create initial shape
-            currentShape = Shape.createPolygon(params.sides, 250, 400, 400, 0);
-            currentShape.applyParams(params.flow, params.angle);
-
-            // Setup UI listeners
-            setupUIListeners();
-
-            // Start render loop
-            requestAnimationFrame(render);
+            const canvas = document.getElementById('canvas');
+            morphLab = new MorphLab(canvas);
         }
 
-        function setupUIListeners() {
-            // Update parameters from UI
-            document.getElementById('sides').addEventListener('input', (e) => {
-                params.sides = parseInt(e.target.value);
-                document.getElementById('sides-value').textContent = params.sides;
-                if (!morphAnimation.active) {
-                    currentShape = Shape.createPolygon(params.sides, 250, 400, 400, 0);
-                    currentShape.applyParams(params.flow, params.angle);
-                }
-            });
-
-            document.getElementById('flow').addEventListener('input', (e) => {
-                params.flow = parseFloat(e.target.value);
-                document.getElementById('flow-value').textContent = params.flow.toFixed(2);
-                if (!morphAnimation.active) {
-                    currentShape.applyParams(params.flow, params.angle);
-                }
-            });
-
-            document.getElementById('angle').addEventListener('input', (e) => {
-                params.angle = parseFloat(e.target.value);
-                document.getElementById('angle-value').textContent = params.angle + '°';
-                if (!morphAnimation.active) {
-                    currentShape.applyParams(params.flow, params.angle);
-                }
-            });
-
-            document.getElementById('duration').addEventListener('input', (e) => {
-                params.duration = parseInt(e.target.value);
-                document.getElementById('duration-value').textContent = params.duration;
-            });
-
-            document.getElementById('easing').addEventListener('input', (e) => {
-                params.easingPower = parseFloat(e.target.value);
-                document.getElementById('easing-value').textContent = params.easingPower.toFixed(1);
-            });
-
-            document.getElementById('insertion').addEventListener('input', (e) => {
-                params.insertionPosition = parseFloat(e.target.value);
-                document.getElementById('insertion-value').textContent = params.insertionPosition.toFixed(2);
-            });
-
-            document.getElementById('emergence').addEventListener('input', (e) => {
-                params.emergenceSpeed = parseFloat(e.target.value);
-                document.getElementById('emergence-value').textContent = params.emergenceSpeed.toFixed(1);
-            });
-
-            document.getElementById('symmetry-weight').addEventListener('input', (e) => {
-                params.symmetryWeight = parseFloat(e.target.value);
-                document.getElementById('symmetry-value').textContent = params.symmetryWeight.toFixed(1);
-            });
-        }
-
-        // ===== MORPH LOGIC =====
-
-        // ===== SNAPSHOT DEBUGGING =====
-        const snapshots = {
-            before: null,
-            justAfter: null,
-            finished: null
-        };
-
-        function captureSnapshot(shape, label) {
-            if (!shape || shape.anchors.length < 2) return null;
-
-            // Create SVG path data
-            let pathData = `M ${shape.anchors[0].pos.x} ${shape.anchors[0].pos.y}`;
-
-            for (let i = 0; i < shape.anchors.length; i++) {
-                const anchor = shape.anchors[i];
-                const nextAnchor = shape.anchors[(i + 1) % shape.anchors.length];
-                const cp1 = anchor.getHandleOutAbs();
-                const cp2 = nextAnchor.getHandleInAbs();
-
-                pathData += ` C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${nextAnchor.pos.x} ${nextAnchor.pos.y}`;
-            }
-            pathData += ' Z';
-
-            // Capture relative handle vectors for each anchor
-            const anchorData = [];
-            for (let i = 0; i < shape.anchors.length; i++) {
-                const anchor = shape.anchors[i];
-                anchorData.push({
-                    index: i,
-                    pos: { x: anchor.pos.x.toFixed(2), y: anchor.pos.y.toFixed(2) },
-                    handleIn: { x: anchor.handleIn.x.toFixed(4), y: anchor.handleIn.y.toFixed(4) },
-                    handleOut: { x: anchor.handleOut.x.toFixed(4), y: anchor.handleOut.y.toFixed(4) }
-                });
-            }
-
-            // Calculate edge angles
-            const edgeAngles = [];
-            for (let i = 0; i < shape.anchors.length; i++) {
-                const anchor = shape.anchors[i];
-                const nextAnchor = shape.anchors[(i + 1) % shape.anchors.length];
-                const dx = nextAnchor.pos.x - anchor.pos.x;
-                const dy = nextAnchor.pos.y - anchor.pos.y;
-                const baseLength = Math.sqrt(dx * dx + dy * dy);
-
-                const cp1 = anchor.getHandleOutAbs();
-                const height = Math.abs((cp1.y - anchor.pos.y) * dx - (cp1.x - anchor.pos.x) * dy) / baseLength;
-                const angle = Math.atan((2 * height) / (baseLength / 2)) * (180 / Math.PI);
-                edgeAngles.push(angle.toFixed(2));
-            }
-
-            return {
-                label,
-                pathData,
-                anchors: shape.anchors.length,
-                symmetry: shape.calculateSymmetry().toFixed(4),
-                edgeAngles: edgeAngles.join(', '),
-                anchorData: anchorData,
-                params: {
-                    flow: params.flow.toFixed(2),
-                    angle: params.angle.toFixed(0)
-                }
-            };
-        }
-
-        function displaySnapshots() {
-            console.log('\n=== SNAPSHOT COMPARISON ===');
-            console.log('BEFORE:', snapshots.before);
-            console.log('JUST AFTER:', snapshots.justAfter);
-            console.log('FINISHED:', snapshots.finished);
-
-            // Create visual comparison with handle data
-            // Paths use absolute coords with center at (400,400), so we translate to offset them
-            const svg = `
-<svg width="1400" height="900" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
-    <rect width="1400" height="900" fill="#0a0a0a"/>
-
-    <!-- Before -->
-    <g transform="translate(-200, 50)">
-        <path d="${snapshots.before?.pathData || ''}" fill="rgba(135,206,235,0.3)" stroke="#4682b4" stroke-width="2"/>
-        <text x="400" y="50" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">BEFORE</text>
-        <text x="400" y="70" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${snapshots.before?.anchors || 0}</text>
-        <text x="400" y="85" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${snapshots.before?.symmetry || 0}</text>
-        <text x="400" y="100" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${snapshots.before?.params.flow || 0}, Angle: ${snapshots.before?.params.angle || 0}°</text>
-        <text x="400" y="115" fill="#aaa" text-anchor="middle" font-size="9">Angles: ${snapshots.before?.edgeAngles || ''}</text>
-    </g>
-
-    <!-- Just After -->
-    <g transform="translate(200, 50)">
-        <path d="${snapshots.justAfter?.pathData || ''}" fill="rgba(255,165,0,0.3)" stroke="#ff8c00" stroke-width="2"/>
-        <text x="400" y="50" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">JUST AFTER START</text>
-        <text x="400" y="70" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${snapshots.justAfter?.anchors || 0}</text>
-        <text x="400" y="85" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${snapshots.justAfter?.symmetry || 0}</text>
-        <text x="400" y="100" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${snapshots.justAfter?.params.flow || 0}, Angle: ${snapshots.justAfter?.params.angle || 0}°</text>
-        <text x="400" y="115" fill="#aaa" text-anchor="middle" font-size="9">Angles: ${snapshots.justAfter?.edgeAngles || ''}</text>
-    </g>
-
-    <!-- Finished -->
-    <g transform="translate(600, 50)">
-        <path d="${snapshots.finished?.pathData || ''}" fill="rgba(0,255,0,0.3)" stroke="#00ff00" stroke-width="2"/>
-        <text x="400" y="50" fill="#fff" text-anchor="middle" font-size="14" font-weight="bold">FINISHED</text>
-        <text x="400" y="70" fill="#aaa" text-anchor="middle" font-size="10">Anchors: ${snapshots.finished?.anchors || 0}</text>
-        <text x="400" y="85" fill="#aaa" text-anchor="middle" font-size="10">Symmetry: ${snapshots.finished?.symmetry || 0}</text>
-        <text x="400" y="100" fill="#aaa" text-anchor="middle" font-size="10">Flow: ${snapshots.finished?.params.flow || 0}, Angle: ${snapshots.finished?.params.angle || 0}°</text>
-        <text x="400" y="115" fill="#aaa" text-anchor="middle" font-size="9">Angles: ${snapshots.finished?.edgeAngles || ''}</text>
-    </g>
-</svg>`;
-
-            console.log('SVG comparison:\n' + svg);
-
-            // Save to file for viewing
-            const blob = new Blob([svg], { type: 'image/svg+xml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'morph-snapshots.svg';
-            a.click();
-        }
-
+        // Global functions for button callbacks
         function startMorph() {
-            if (morphAnimation.active) return;
-
-            const fromSides = params.sides;
-            const toSides = fromSides + 1;
-
-            // CAPTURE SNAPSHOT: BEFORE
-            snapshots.before = captureSnapshot(currentShape, 'BEFORE');
-
-            // Create target shape with n+1 sides
-            const toShape = Shape.createPolygon(toSides, 250, 400, 400, 0);
-            toShape.applyParams(params.flow, params.angle);
-
-            // Start morph animation
-            morphAnimation.start(currentShape, toShape, params);
-
-            // Reset snapshot flags
-            snapshots.justAfter = null;
-            snapshots.finished = null;
-
-            console.log(`Starting morph: ${fromSides} → ${toSides} sides`);
+            morphLab.startMorph();
         }
-
-        function updateMorph(timestamp) {
-            if (!morphAnimation.active) return;
-
-            // Update animation and get interpolated shape
-            currentShape = morphAnimation.update(timestamp);
-
-            // CAPTURE SNAPSHOT: JUST AFTER START (around 1-2% progress)
-            if (!snapshots.justAfter && morphAnimation.progress > 0.01 && morphAnimation.progress < 0.03) {
-                snapshots.justAfter = captureSnapshot(currentShape, 'JUST AFTER');
-                console.log('Captured JUST AFTER snapshot at progress:', (morphAnimation.progress * 100).toFixed(1) + '%');
-            }
-
-            // Update metrics
-            document.getElementById('progress-metric').textContent = (morphAnimation.progress * 100).toFixed(1) + '%';
-            document.getElementById('symmetry-metric').textContent = currentShape.calculateSymmetry().toFixed(4);
-            document.getElementById('anchor-metric').textContent = currentShape.anchors.length;
-
-            // Check if complete
-            if (morphAnimation.isComplete()) {
-                // CAPTURE SNAPSHOT: FINISHED
-                snapshots.finished = captureSnapshot(currentShape, 'FINISHED');
-                console.log('Captured FINISHED snapshot');
-
-                // Display all snapshots
-                displaySnapshots();
-
-                params.sides++;
-                document.getElementById('sides').value = params.sides;
-                document.getElementById('sides-value').textContent = params.sides;
-                console.log('Morph complete');
-            }
-        }
-
-        // lerpShapes function has been moved to MorphAnimation._interpolateShapes()
-        // Legacy function removed - all morph logic is now in MorphAnimation class
-
-        // Keeping this as a wrapper for backwards compatibility if needed
-
-        // ===== RENDERING =====
-
-        function render(timestamp) {
-            // Clear canvas
-            ctx.fillStyle = '#0a0a0a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Update morph if active
-            if (morphAnimation.active) {
-                updateMorph(timestamp);
-            }
-
-            // Draw current shape
-            if (currentShape) {
-                drawShape(currentShape);
-            }
-
-            requestAnimationFrame(render);
-        }
-
-        function drawShape(shape) {
-            if (shape.anchors.length < 2) return;
-
-            ctx.strokeStyle = '#4682b4';
-            ctx.lineWidth = 2;
-            ctx.fillStyle = 'rgba(135, 206, 235, 0.3)';
-
-            // Draw the path
-            ctx.beginPath();
-            const firstAnchor = shape.anchors[0];
-            ctx.moveTo(firstAnchor.pos.x, firstAnchor.pos.y);
-
-            for (let i = 0; i < shape.anchors.length; i++) {
-                const anchor = shape.anchors[i];
-                const nextAnchor = shape.anchors[(i + 1) % shape.anchors.length];
-
-                const cp1 = anchor.getHandleOutAbs();
-                const cp2 = nextAnchor.getHandleInAbs();
-
-                ctx.bezierCurveTo(
-                    cp1.x, cp1.y,
-                    cp2.x, cp2.y,
-                    nextAnchor.pos.x, nextAnchor.pos.y
-                );
-            }
-
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // Draw anchor points
-            shape.anchors.forEach(anchor => {
-                ctx.fillStyle = '#ff00ff';
-                ctx.beginPath();
-                ctx.arc(anchor.pos.x, anchor.pos.y, 4, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Draw handles
-                ctx.strokeStyle = '#f66';
-                ctx.lineWidth = 1;
-                const outAbs = anchor.getHandleOutAbs();
-                ctx.beginPath();
-                ctx.moveTo(anchor.pos.x, anchor.pos.y);
-                ctx.lineTo(outAbs.x, outAbs.y);
-                ctx.stroke();
-
-                ctx.fillStyle = '#f66';
-                ctx.beginPath();
-                ctx.arc(outAbs.x, outAbs.y, 2, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-
-        // ===== UI ACTIONS =====
 
         function resetState() {
-            morphAnimation.active = false;
-            currentShape = Shape.createPolygon(params.sides, 250, 400, 400, 0);
-            currentShape.applyParams(params.flow, params.angle);
+            morphLab.resetState();
         }
 
         function addFailure() {
-            const failure = prompt('What didn\'t work?');
-            if (failure) {
-                const list = document.getElementById('failure-list');
-                const li = document.createElement('li');
-                li.textContent = failure;
-                list.appendChild(li);
-            }
+            morphLab.addFailure();
         }
 
         // Start the lab!
