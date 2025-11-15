@@ -868,12 +868,12 @@
                     initialHandleOut.y = normDy * handleLength;
                 }
 
-                // Calculate target handles for emerging anchor using emergingEdgeAngle
+                // Calculate target handles for emerging anchor using currentAngle
                 // (Do NOT call applyParams - that would change ALL anchors)
                 const prevAnchor = result.anchors[newAnchorIdx - 1];
                 const nextAnchor = result.anchors[0]; // wraps around to first anchor
 
-                const apexAngle = (emergingEdgeAngle * Math.PI) / 180;
+                const apexAngle = (currentAngle * Math.PI) / 180;
 
                 // Calculate handleOut apex (between emergingAnchor and nextAnchor)
                 const dx_out = nextAnchor.pos.x - emergingAnchor.pos.x;
