@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""
-Development Environment for svGen
-Runs HTTP server + file watcher in parallel for live development.
-"""
+"""Development environment orchestration for FloAng."""
+
+import argparse
 import os
-import sys
 import subprocess
 import signal
-import time
+import sys
 import threading
-import select
+import time
 
 
 def print_banner():
@@ -42,13 +40,22 @@ def stream_output(proc, label):
     except Exception as e:
         print(f"[{label}] Stream ended: {e}")
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="FloAng dev environment")
+    parser.add_argument("--with-webdriver", action="store_true",
+                        help="Launch automation runner (requires Selenium hub)")
+    parser.add_argument("--automation-browser", default="chrome", choices=("chrome", "firefox"))
+    parser.add_argument("--automation-headless", action="store_true")
+    parser.add_argument("--log-endpoint", help="Optional URL to POST console logs")
+    parser.add_argument("--server-url", default="http://localhost:8000/morph-lab.html")
+    return parser.parse_args()
+
 
 def main():
-    """Run dev server and file watcher together"""
+    args = parse_args()
 
     print_banner()
 
-    # Start both processes
     print("Starting HTTP Server...")
     server_proc = subprocess.Popen(
         [sys.executable, "dev_server.py"],
@@ -69,8 +76,33 @@ def main():
 
     processes = [
         (server_proc, "Server"),
-        (watcher_proc, "Watcher")
+        (watcher_proc, "Watcher"),
     ]
+
+    if args.with_webdriver:
+        print("Starting Automation Runner...")
+        automation_cmd = [
+            sys.executable,
+            "-m",
+            "automation.morph_runner",
+            "--server-url",
+            args.server_url,
+            "--browser",
+            args.automation_browser,
+        ]
+        if args.automation_headless:
+            automation_cmd.append("--headless")
+        if args.log_endpoint:
+            automation_cmd.extend(["--log-endpoint", args.log_endpoint])
+
+        automation_proc = subprocess.Popen(
+            automation_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+        processes.append((automation_proc, "Automation"))
 
     # Start threads to stream output
     threads = []

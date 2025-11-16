@@ -40,7 +40,7 @@ python my_pattern.py
 
 ## 📁 Project Structure
 
-```
+```text
 FloAng/
 ├── src/                    # Core library
 │   └── svg_generator.py    # Point, SVGCanvas, primitives
@@ -56,6 +56,44 @@ FloAng/
 ├── watch.py                # File watcher only
 └── viewer.html             # Visual browser for SVGs
 ```
+
+## 🛠️ Development Tools
+
+### Full Environment (Recommended)
+
+```bash
+python dev.py
+python dev.py --with-webdriver --automation-headless   # also run Selenium smoke test
+```
+
+- HTTP server on port 8000
+- Auto-regenerates on file save
+- Live development workflow
+
+### Morph Lab Automation
+
+```bash
+# 1) Start Selenium hub (once)
+java -jar selenium-server standalone \
+  --port 4041 \
+  --session-timeout 99999999 \
+  --healthcheck-interval 99999999 \
+  -I 'firefox' -I 'chrome'
+
+# 2) Run local smoke test (saves logs under .logs/morphlab/<runId>.json)
+python dev.py --with-webdriver --automation-headless \
+  --log-dir .logs/morphlab \
+  --server-url http://localhost:8000/morph-lab.html
+
+# 3) Standalone/CI usage (e.g., Cloud Run job)
+python -m automation.morph_runner --headless --browser chrome \
+  --server-url https://staging.example.com/morph-lab.html \
+  --log-endpoint https://logs.example.com/api/morph
+```
+
+The automation runner loads `morph-lab.html`, triggers `startMorph()`, waits for the "Morph complete"
+console message, then forwards captured console logs either to the configured endpoint or to the
+local `.logs/morphlab` directory.
 
 ## 📖 Documentation
 
