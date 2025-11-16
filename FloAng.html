@@ -60,35 +60,6 @@
             </div>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="feedback-mode-container" id="feedback-mode-container">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
-                <input type="checkbox" id="feedback-mode" onchange="toggleFeedbackMode()">
-                <span class="feedback-label">Feedback Mode</span>
-            </label>
-            <button class="preset-btn" onclick="openConstraintManager()" style="font-size: 11px;">Manage Constraints</button>
-        </div>
-
-        <div class="divider"></div>
-
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="show-guides" onchange="updatePreview()">
-            <span style="font-size: 13px;">Show Guides</span>
-        </label>
-
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="show-analysis" onchange="updatePreview()">
-            <span style="font-size: 13px;">Geometric Analysis</span>
-        </label>
-
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="fill-container" onchange="toggleFillContainer()">
-            <span style="font-size: 13px;">Fill Container</span>
-        </label>
-
-        <div class="divider"></div>
-
         <button onclick="openExplorer()" style="background: #c6f; color: #000;">🔍 Explore Parameter Space</button>
 
         <div class="divider"></div>
@@ -97,6 +68,37 @@
         <button onclick="downloadSVG()" style="background: #66c; color: #fff;">Download SVG</button>
         <button onclick="downloadPNG()" style="background: #66c; color: #fff;">Download PNG</button>
     </div>
+
+    <aside id="debug-sidebar">
+        <h2>🔧 Debug Menu</h2>
+        <div class="sidebar-section">
+            <h3>Rendering</h3>
+            <label class="sidebar-toggle">
+                <input type="checkbox" id="fill-container" onchange="toggleFillContainer()">
+                <span>Fill Container</span>
+            </label>
+            <label class="sidebar-toggle">
+                <input type="checkbox" id="show-guides" onchange="updatePreview()">
+                <span>Show Guides</span>
+            </label>
+            <label class="sidebar-toggle">
+                <input type="checkbox" id="show-analysis" onchange="updatePreview()">
+                <span>Geometric Analysis</span>
+            </label>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Exploration</h3>
+            <label class="sidebar-toggle">
+                <input type="checkbox" id="pulse-curve-enabled" onchange="updatePulseAnimations()">
+                <span>Smoothing Animation</span>
+            </label>
+            <button class="sidebar-btn" onclick="openExplorer()">🔍 Explore Parameter Space</button>
+            <button class="sidebar-btn" onclick="shareConfiguration()">Share Configuration</button>
+            <button class="sidebar-btn" onclick="downloadSVG()">Download SVG</button>
+            <button class="sidebar-btn" onclick="downloadPNG()">Download PNG</button>
+        </div>
+    </aside>
 
     <!-- Share notification -->
     <div id="share-notification">Link copied to clipboard!</div>
@@ -363,42 +365,8 @@
     </div>
 
     <!-- Timeline -->
-    <div id="timeline">
-        <!-- Tab Headers -->
-        <div id="timeline-tabs">
-            <button class="timeline-tab active" onclick="switchTimelineTab('keyframes')">
-                🎬 Keyframes
-            </button>
-            <button class="timeline-tab" onclick="switchTimelineTab('discoveries')">
-                ✨ Discoveries (n=<span id="discoveries-n-display">3</span>)
-            </button>
-        </div>
-
-        <!-- Keyframes Tab Content -->
-        <div id="keyframes-tab" class="timeline-tab-content active">
-            <div id="timeline-header">
-                <div class="animation-controls">
-                    <div class="control-group">
-                        <label class="control-label">Frame Length</label>
-                        <input type="number" id="frame-length" min="1" max="30" value="5" style="width: 60px;">
-                        <span class="control-value"><span id="frame-length-value">5</span>s</span>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label">Transition</label>
-                        <input type="number" id="transition-time" min="0" max="100" value="20" style="width: 60px;">
-                        <span class="control-value"><span id="transition-value">20</span>%</span>
-                    </div>
-                    <button id="play-btn" class="play-btn" onclick="togglePlay()">▶ Play</button>
-                    <button onclick="addKeyframe()">+ Add Keyframe</button>
-                </div>
-            </div>
-            <div id="keyframes-container">
-                <!-- Keyframes will be added here -->
-            </div>
-        </div>
-
-        <!-- Discoveries Tab Content -->
-        <div id="discoveries-tab" class="timeline-tab-content">
+    <div id="timeline" class="discoveries-only">
+        <div id="discoveries-tab" class="timeline-tab-content active">
             <div id="timeline-header">
                 <div class="animation-controls" style="width: 100%;">
                     <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
